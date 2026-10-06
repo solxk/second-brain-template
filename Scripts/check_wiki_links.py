@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Check that every [[wiki link]] in the vault resolves to an existing, live note.
 
-Run from anywhere: python3 "Areas/Second Brain/Scripts/check_wiki_links.py"
+Run from anywhere: python3 Scripts/check_wiki_links.py
 Exit code 0 = no broken links; 1 = broken links found.
 
 Reports two things:
@@ -26,15 +26,15 @@ Rules (matching Obsidian's resolution):
   verbatim sources kept unedited (pasted articles, transcripts) whose [[links]] are the
   original author's examples and are not ours to fix. Added 2026-08-31.
 
-Written 2026-08-16, after the _Project.md naming convention silently broke every
-project link in the vault for two days. See "2026-08-16 Folder note convention.md".
+A link only resolves if a note with that exact filename exists, so a rename or a typo
+silently breaks every link to it. This catches that before a commit.
 """
 
 import re
 import sys
 from pathlib import Path
 
-# Vault root = three levels up from this script (Scripts -> Second Brain -> Areas -> root)
+# Vault root = the folder above Scripts/
 VAULT = Path(__file__).resolve().parent.parent
 SKIP_DIRS = {".git", ".obsidian", ".claude"}
 

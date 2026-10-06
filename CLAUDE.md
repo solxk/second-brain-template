@@ -10,9 +10,10 @@ If `Me.md` does not exist, this folder has not been set up. Read `SETUP.md` and 
 
 1. Read `Map.md`, then `Me.md`.
 2. Run `python3 Scripts/tasks.py brief`.
-3. Read the **Inbox** list in Google Tasks (the connector). Each item becomes a task (`tasks.py add --inbox`), a dated reminder in **My Tasks**, or a **To watch** entry, then is ticked off in Inbox.
+3. If Google Tasks is connected, read its **Inbox** list. Each item becomes a task (`tasks.py add --inbox`), a dated reminder in **My Tasks**, or a **To watch** entry, then is ticked off in Inbox. If it isn't connected, skip this step.
 4. Check `Inbox/` and the "Recently shifted" section of each project's folder note.
-5. Open with a short briefing: overdue and due this week, decisions waiting, inbox items to file, anything untouched for two weeks.
+5. Open with a short briefing: overdue and due soon, decisions waiting, inbox items to file, anything untouched for two weeks.
+6. When the owner asks for the board, start `python3 Scripts/tasks_board.py serve` in the background and give them http://127.0.0.1:8765/. It runs while the session is open.
 
 ## On session end
 
@@ -26,15 +27,16 @@ If `Me.md` does not exist, this folder has not been set up. Read `SETUP.md` and 
 
 Claude may create and edit anything in `Inbox/`, `Projects/`, `Areas/`, `Resources/`, `Archive/`, `Tasks/` and `Map.md`.
 
-Claude never edits `Me.md` or any note the owner marks as their own thinking. Read them, quote them, suggest changes in chat.
+Claude never edits `Me.md` or any note the owner marks as their own thinking, except during setup and when the owner asks for a specific change to it. Otherwise: read them, quote them, suggest changes in chat.
 
 ## Tasks and reminders
 
 - One note per task in `Tasks/`, made with `python3 Scripts/tasks.py add "Title" --project "Name" [--due YYYY-MM-DD] [--priority high|normal|low] [--effort deep|medium|easy] [--decision] [--kind project] [--parent "Project title"]`.
-- Three levels, no deeper: **venture** (a folder note in `Projects/` or `Areas/`) → **project** (`--kind project`, has a finish line and tasks under it) → **task** (one session's work, or one decision).
+- Three levels, no deeper: a **folder** in `Projects/` or `Areas/` (the `project` field names its folder note) → a **project item** inside it (`--kind project`: a piece of work with a finish line and several tasks under it, made only when a group of tasks clearly belongs together) → a **task**.
 - A task is one session's work or one decision. `effort` says what it costs (deep = a focused block, medium = an ordinary session, easy = minutes). `decision` marks a yes/no that is the owner's to make. Claude proposes both; the owner overrules.
 - `due` is a real deadline only. `blocked` is worked out from `depends-on` by `sync`, never typed. Priority is proposed by Claude with a one-line reason; Claude never changes a due date or priority the owner set without saying so.
-- Small personal things with no project and nothing worth logging (post a letter, take the bins out) are **reminders**: they go in Google Tasks with a date, never in `Tasks/`. Test: if you'd want to know later that it was done and why, it's a task; if you only need not to forget it, it's a reminder.
+- Small personal things with no project and nothing worth logging (post a letter, take the bins out) are **reminders**: they go in Google Tasks with a date, never in `Tasks/`. Test: if you'd want to know later that it was done and why, it's a task; if you only need not to forget it, it's a reminder. Links and videos to get to go in the Google Tasks **To watch** list. A habit (no screens after ten) is neither: it goes under Loose ends in the area's folder note.
+- If Google Tasks isn't connected, reminders go as a checklist under "Reminders" in `Inbox/Inbox.md` and links under "To watch" in `Resources/Resources.md`, until it is.
 - Never delete a task note by hand. Set `task-status: dropped` with a line saying why; `sync` archives it.
 - The board is the interface: `python3 Scripts/tasks_board.py serve`, then http://127.0.0.1:8765/.
 
@@ -57,3 +59,4 @@ Anything in `Inbox/` is unfiled. Ingest it: put it in the right project or resou
 - Every note Claude writes gets `created-by: claude` in its frontmatter.
 - No new top-level folders without asking.
 - Explain anything technical in plain words: what it does for the owner first, the mechanism second.
+- On Windows the Python command is `python`, not `python3`. `vault.json` records which one works (`"python"`); use it in every command.

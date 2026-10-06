@@ -6,7 +6,7 @@ Part of the Second Brain template. Run from the vault root:
 Commands (run from anywhere):
   python3 Scripts/tasks.py brief          # arrival rollup
   python3 Scripts/tasks.py sync           # derive blocked, done dates, archive done + dropped
-  python3 Scripts/tasks.py add "Title" --project "Echo" [--due 2026-09-24]
+  python3 Scripts/tasks.py add "Title" --project "Acme" [--due 2026-09-24]
         [--priority high|normal|low] [--owner Name] [--parent "Title"] [--after "Title" ...] [--inbox] [--note "text"]
         [--kind project] [--effort deep|medium|easy] [--decision]
   python3 Scripts/tasks.py list [--project X] [--status Y]
@@ -389,6 +389,7 @@ def brief(folder: Path = TASKS_DIR, today: date | None = None) -> dict:
                        key=lambda t: t["due"]),
         "high": [t for t in live if t["priority"] == "high" and t[STATUS] != "blocked" and not t.get("due")],
         "inbox": [t for t in tasks.values() if t[STATUS] == "inbox"],
+        "decisions": sorted((t for t in live if is_decision(t)), key=lambda t: (t.get("created") or "", t["title"])),
         "stale": [t for t in live if t.get("updated") and (today - _parse_date(t["updated"], "updated")).days >= STALE_DAYS],
         "unblocked": [t for t in live if t[STATUS] == "blocked" and deps_state(t, tasks) == (True, [])],
         "blocked": [t for t in live if t[STATUS] == "blocked"],
@@ -408,7 +409,8 @@ def format_brief(b: dict, today: date) -> str:
     parts = [f"Task brief — {today.isoformat()}",
              "counts: " + (", ".join(f"{k} {v}" for k, v in b["counts"].items() if v) or "no tasks")]
     sections = [("OVERDUE", "overdue"), (f"Due in {SOON_DAYS} days", "soon"),
-                ("High priority, undated, unblocked", "high"), ("Inbox — file these", "inbox"),
+                ("High priority, undated, unblocked", "high"), ("Decisions waiting", "decisions"),
+                ("Inbox — file these", "inbox"),
                 ("Newly unblocked — sync will flip to todo", "unblocked"),
                 (f"Stale — no change in {STALE_DAYS}+ days", "stale"), ("Blocked", "blocked")]
     for label, key in sections:

@@ -343,6 +343,14 @@ class ReviewFixes(unittest.TestCase):
         with self.assertRaises(T.TaskError):
             T.update_task(self.tmp, "Derived", {T.STATUS: "blocked"}, self.today, source="board")
 
+    def test_brief_lists_decisions_oldest_first(self):
+        make(self.tmp, "New call", decision="true", created="2026-10-01")
+        make(self.tmp, "Old call", decision="true", created="2026-09-01")
+        make(self.tmp, "Not a call")
+        b = T.brief(self.tmp, self.today)
+        self.assertEqual([t["title"] for t in b["decisions"]], ["Old call", "New call"])
+        self.assertIn("Decisions waiting (2)", T.format_brief(b, self.today))
+
     def test_sync_without_archive_keeps_dropped_in_place(self):
         make(self.tmp, "Dropped", status="dropped")
         r = T.sync(self.tmp, self.today, archive=False)
