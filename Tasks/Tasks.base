@@ -1,0 +1,171 @@
+filters:
+  and:
+    - type == "task"
+    - file.folder == "Tasks"
+formulas:
+  rank: if(priority == "high", 1, if(priority == "normal", 2, 3))
+properties:
+  file.name:
+    displayName: Task
+  note.project:
+    displayName: Project
+  note.task-status:
+    displayName: Status
+  note.priority:
+    displayName: Priority
+  note.kind:
+    displayName: Kind
+  note.effort:
+    displayName: Effort
+  note.decision:
+    displayName: Decision
+  note.due:
+    displayName: Due
+  note.owner:
+    displayName: Owner
+  note.depends-on:
+    displayName: Depends on
+  note.parent:
+    displayName: Parent
+  note.done:
+    displayName: Done
+  note.updated:
+    displayName: Updated
+views:
+  - type: table
+    name: Board
+    filters:
+      and:
+        - note["task-status"] != "done"
+        - note["task-status"] != "dropped"
+        - note["task-status"] != "someday"
+        - note["task-status"] != "inbox"
+    groupBy:
+      property: project
+      direction: ASC
+    order:
+      - file.name
+      - task-status
+      - kind
+      - priority
+      - effort
+      - due
+      - owner
+      - depends-on
+    sort:
+      - property: formula.rank
+        direction: ASC
+      - property: due
+        direction: ASC
+    columnSize:
+      file.name: 575
+  - type: table
+    name: Due
+    filters:
+      and:
+        - note["task-status"] != "done"
+        - note["task-status"] != "dropped"
+        - note["task-status"] != "someday"
+        - not:
+            - due.isEmpty()
+    order:
+      - file.name
+      - due
+      - project
+      - task-status
+      - priority
+      - owner
+    sort:
+      - property: due
+        direction: ASC
+  - type: table
+    name: Inbox
+    filters:
+      and:
+        - note["task-status"] == "inbox"
+    order:
+      - file.name
+      - project
+      - priority
+      - due
+      - created
+    sort:
+      - property: created
+        direction: ASC
+  - type: table
+    name: Blocked
+    filters:
+      and:
+        - note["task-status"] == "blocked"
+    order:
+      - file.name
+      - project
+      - depends-on
+      - priority
+      - due
+    sort:
+      - property: project
+        direction: ASC
+  - type: table
+    name: Unscheduled
+    filters:
+      and:
+        - note["task-status"] == "todo"
+        - due.isEmpty()
+    groupBy:
+      property: project
+      direction: ASC
+    order:
+      - file.name
+      - priority
+      - owner
+      - updated
+    sort:
+      - property: formula.rank
+        direction: ASC
+  - type: table
+    name: Someday
+    filters:
+      and:
+        - note["task-status"] == "someday"
+    order:
+      - file.name
+      - project
+      - priority
+      - updated
+    sort:
+      - property: project
+        direction: ASC
+  - type: table
+    name: Done
+    filters:
+      and:
+        - note["task-status"] == "done"
+    order:
+      - file.name
+      - done
+      - project
+      - owner
+    sort:
+      - property: done
+        direction: DESC
+  - type: table
+    name: Here
+    filters:
+      and:
+        - file.hasLink(this.file)
+        - note["task-status"] != "done"
+        - note["task-status"] != "dropped"
+        - note["task-status"] != "someday"
+    order:
+      - file.name
+      - task-status
+      - priority
+      - due
+      - owner
+      - depends-on
+    sort:
+      - property: formula.rank
+        direction: ASC
+      - property: due
+        direction: ASC

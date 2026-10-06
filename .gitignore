@@ -1,0 +1,6 @@
+.DS_Store
+.obsidian/workspace*.json
+.obsidian/cache
+__pycache__/
+Tasks/Board.html
+.env

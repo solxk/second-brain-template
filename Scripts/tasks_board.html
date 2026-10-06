@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tasks</title>
+<style>
+  :root { --bg:#fff; --fg:#1b1b1b; --muted:#6b6b6b; --line:#e4e4e4; --accent:#2f5bea; --soft:#f4f5f7; --danger:#b42318; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#141414; --fg:#ededed; --muted:#9a9a9a; --line:#2a2a2a; --accent:#7f9cff; --soft:#1e1e1e; --danger:#ff7a6b; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.45 -apple-system, "Segoe UI", system-ui, sans-serif; }
+  header { position:sticky; top:0; background:var(--bg); border-bottom:1px solid var(--line); padding:12px 16px; z-index:2; }
+  h1 { font-size:18px; margin:0 0 8px; display:flex; justify-content:space-between; align-items:baseline; }
+  h1 small { color:var(--muted); font-weight:normal; font-size:13px; }
+  textarea { width:100%; min-height:44px; border:1px solid var(--line); border-radius:8px; padding:10px 12px; font:inherit; background:var(--soft); color:var(--fg); resize:vertical; }
+  nav { display:flex; gap:6px; overflow-x:auto; padding:8px 0 0; }
+  nav button, .filters select { min-height:36px; border:1px solid var(--line); background:var(--bg); color:var(--fg); border-radius:18px; padding:0 12px; font:inherit; white-space:nowrap; }
+  nav button.on { background:var(--fg); color:var(--bg); border-color:var(--fg); }
+  .filters { display:flex; gap:6px; overflow-x:auto; padding:8px 16px 0; }
+  main { padding:8px 16px 80px; }
+  .group { margin:16px 0 4px; font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
+  .project { margin:8px 0 0 0; padding:6px 0; border-top:1px solid var(--line); font-weight:600; display:flex; gap:8px; align-items:center; cursor:pointer; min-height:44px; }
+  .project .count { color:var(--muted); font-weight:normal; font-size:13px; }
+  .task { display:flex; gap:10px; align-items:flex-start; padding:10px 0; border-top:1px solid var(--line); min-height:44px; }
+  .task.sub { padding-left:18px; }
+  .task input[type=checkbox] { width:22px; height:22px; margin:2px 0 0; flex:none; }
+  .task .t { flex:1; cursor:pointer; }
+  .task .meta { color:var(--muted); font-size:13px; }
+  .chip { display:inline-block; font-size:12px; padding:1px 7px; border-radius:10px; background:var(--soft); margin-right:4px; }
+  .chip.high { background:var(--danger); color:#fff; } .chip.deep { font-weight:600; } .chip.overdue { color:var(--danger); font-weight:600; }
+  .empty { color:var(--muted); padding:24px 0; }
+  #panel { position:fixed; inset:auto 0 0 0; max-height:85vh; overflow:auto; background:var(--bg); border-top:1px solid var(--line); box-shadow:0 -8px 24px rgba(0,0,0,.12); padding:16px; display:none; z-index:3; }
+  #panel.open { display:block; }
+  #panel h2 { font-size:17px; margin:0 0 8px; padding-right:40px; }
+  #panel .close { position:absolute; top:10px; right:12px; width:40px; height:40px; border:0; background:transparent; font-size:22px; color:var(--muted); }
+  .field { display:grid; grid-template-columns:90px 1fr; gap:8px; align-items:center; margin:6px 0; font-size:14px; }
+  .field select, .field input { min-height:40px; border:1px solid var(--line); border-radius:6px; padding:0 8px; font:inherit; background:var(--bg); color:var(--fg); width:100%; }
+  .body { margin-top:12px; padding-top:12px; border-top:1px solid var(--line); font-size:14px; white-space:pre-wrap; }
+  .body a { color:var(--accent); }
+  .actions { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+  .actions a, .actions button { min-height:40px; display:inline-flex; align-items:center; padding:0 12px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--fg); text-decoration:none; font:inherit; }
+  #toast { position:fixed; left:16px; right:16px; bottom:16px; background:var(--fg); color:var(--bg); padding:10px 14px; border-radius:8px; display:none; z-index:4; }
+  .ro { color:var(--muted); font-size:13px; }
+</style>
+</head>
+<body>
+<header>
+  <h1><span>Tasks</span><small id="stamp"></small></h1>
+  <textarea id="dump" placeholder="Brain dump: one task per line, Enter to add (Shift-Enter for a new line)"></textarea>
+  <nav id="tabs"></nav>
+</header>
+<div class="filters" id="filters"></div>
+<main id="main"></main>
+<div id="panel"><button class="close" aria-label="Close">×</button><div id="panelBody"></div></div>
+<div id="toast"></div>
+<script>
+/*BOARD_DATA*/
+const LIVE = !window.BOARD_DATA;
+const VIEWS = [["today","Today"],["board","Board"],["decisions","Decisions"],["waiting","Waiting on others"],["inbox","Inbox"],["someday","Someday"],["done","Done"]];
+const S = { data:null, view:"today", filters:{venture:"",effort:"",owner:"",priority:""}, open:null, collapsed:new Set() };
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const obs = file => `obsidian://open?vault=${encodeURIComponent(S.data.vault)}&file=${encodeURIComponent(file)}`;
+const STATUS_KEY = "task-status";
+
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.style.display = "block"; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = "none", 2500); }
+
+async function load() {
+  if (!LIVE) { S.data = window.BOARD_DATA; render(); return; }
+  try { S.data = await (await fetch("/api/tasks", {cache:"no-store"})).json(); render(); }
+  catch (e) { $("#main").innerHTML = `<p class="empty">Can't reach the board server. Start it with: python3 Scripts/tasks_board.py serve</p>`; }
+}
+
+function byName() { const m = {}; for (const t of S.data.tasks) m[t.name] = t; return m; }
+
+function passes(t) {
+  const f = S.filters;
+  return (!f.venture || t.project_name === f.venture) && (!f.effort || (f.effort === "unsized" ? !t.effort : t.effort === f.effort))
+      && (!f.owner || t.owner === f.owner) && (!f.priority || t.priority === f.priority);
+}
+
+function chips(t) {
+  const out = [];
+  if (t.due) out.push(`<span class="chip ${t.due < S.data.today ? "overdue" : ""}">${t.due < S.data.today ? "overdue " : "due "}${t.due}</span>`);
+  if (t.priority === "high") out.push(`<span class="chip high">high</span>`);
+  if (t.effort) out.push(`<span class="chip ${t.effort}">${t.effort}</span>`);
+  if (t.decision) out.push(`<span class="chip">decision</span>`);
+  if (t[STATUS_KEY] === "blocked") out.push(`<span class="chip">blocked</span>`);
+  if (t[STATUS_KEY] === "doing") out.push(`<span class="chip">doing</span>`);
+  if (t.owner !== S.data.me) out.push(`<span class="chip">${esc(t.owner)}</span>`);
+  return out.join("");
+}
+
+function row(t, sub) {
+  const done = t[STATUS_KEY] === "done";
+  return `<div class="task ${sub ? "sub" : ""}" data-name="${esc(t.name)}">
+    <input type="checkbox" ${done ? "checked" : ""} ${LIVE ? "" : "disabled"} aria-label="Done">
+    <div class="t"><div>${esc(t.title)}</div><div class="meta">${S.view === "board" ? "" : esc(t.project_name) + " · "}${chips(t)}</div></div></div>`;
+}
+
+function render() {
+  const d = S.data, all = byName();
+  $("#stamp").textContent = (LIVE ? "" : "snapshot · ") + d.today;
+  $("#tabs").innerHTML = VIEWS.map(([k, label]) => `<button data-v="${k}" class="${S.view === k ? "on" : ""}">${label}${k === "today" ? ` (${d.views.today.filter(n => passes(all[n])).length})` : ""}</button>`).join("");
+  const owners = [...new Set(d.tasks.map(t => t.owner))].sort();
+  const sel = (key, opts, label) => `<select data-f="${key}"><option value="">${label}</option>${opts.map(o => `<option ${S.filters[key] === o ? "selected" : ""} value="${esc(o)}">${esc(o)}</option>`).join("")}</select>`;
+  $("#filters").innerHTML = sel("venture", d.ventures, "All ventures") + sel("effort", ["deep", "medium", "easy", "unsized"], "Any effort") + sel("owner", owners, "Anyone") + sel("priority", ["high", "normal", "low"], "Any priority");
+  let html = "";
+  if (S.view === "board") {
+    // Grouping comes from the server (tree); filters apply to tasks only, so a project is shown whenever
+    // it passes or any of its children pass, and a child can never be hidden by its parent.
+    for (const [v, node] of Object.entries(d.tree)) {
+      let section = "";
+      for (const pr of node.projects) {
+        const p = all[pr.name]; if (!p) continue;
+        const kids = pr.children.map(n => all[n]).filter(t => t && passes(t));
+        if (!kids.length && !passes(p)) continue;
+        const closed = S.collapsed.has(p.name);
+        section += `<div class="project" data-proj="${esc(p.name)}"><span>${closed ? "▸" : "▾"}</span><span class="t" data-name="${esc(p.name)}">${esc(p.title)}</span><span class="count">${kids.length}</span></div>`;
+        if (!closed) section += kids.map(k => row(k, true)).join("");
+      }
+      section += node.loose.map(n => all[n]).filter(t => t && passes(t)).map(t => row(t, false)).join("");
+      if (section) html += `<div class="group">${esc(v)}</div>` + section;
+    }
+  } else {
+    const names = d.views[S.view] || [];
+    html = names.map(n => all[n]).filter(t => t && passes(t)).map(t => row(t, false)).join("");
+  }
+  $("#main").innerHTML = html || `<p class="empty">Nothing here.</p>`;
+  if (d.errors.length) $("#main").innerHTML += `<p class="empty">Malformed task files: ${d.errors.map(esc).join(", ")}</p>`;
+}
+
+function bodyHtml(body) {
+  return esc(body).replace(/\[\[([^\]|#]+)(?:[#|][^\]]*)?\]\]/g, (m, name) => `<a href="${obs(name.trim())}">${esc(name.trim())}</a>`);
+}
+
+function openPanel(name) {
+  const t = byName()[name]; if (!t) return; S.open = name;
+  const opt = (opts, cur) => opts.map(o => `<option ${o === (cur || "") ? "selected" : ""} value="${esc(o)}">${esc(o) || "—"}</option>`).join("");
+  const dis = LIVE ? "" : "disabled";
+  $("#panelBody").innerHTML = `<h2>${esc(t.title)}</h2>
+    ${LIVE ? "" : `<p class="ro">Snapshot: open the live board to edit.</p>`}
+    <div class="field"><label>Status</label><select data-k="${STATUS_KEY}" ${dis}>${opt(t[STATUS_KEY] === "blocked" ? ["blocked","inbox","todo","doing","someday","done","dropped"] : ["inbox","todo","doing","someday","done","dropped"], t[STATUS_KEY])}</select></div>
+    <div class="field"><label>Priority</label><select data-k="priority" ${dis}>${opt(["high","normal","low"], t.priority)}</select></div>
+    <div class="field"><label>Effort</label><select data-k="effort" ${dis}>${opt(["","deep","medium","easy"], t.effort)}</select></div>
+    <div class="field"><label>Kind</label><select data-k="kind" ${dis}>${opt(["task","project"], t.kind)}</select></div>
+    <div class="field"><label>Decision</label><select data-k="decision" ${dis}>${opt(["false","true"], String(!!t.decision))}</select></div>
+    <div class="field"><label>Due</label><input type="date" data-k="due" data-blur="1" value="${esc(t.due || "")}" ${dis}></div>
+    <div class="field"><label>Venture</label><select data-k="project" ${dis}>${opt(["", ...S.data.ventures], t.project_name)}</select></div>
+    <div class="field"><label>Parent</label><select data-k="parent" ${dis}>${opt(["", ...S.data.projects.filter(p => p !== t.name)], t.parent_name)}</select></div>
+    <div class="field"><label>Owner</label><input data-k="owner" value="${esc(t.owner)}" ${dis}></div>
+    <div class="body">${bodyHtml(t.body)}</div>
+    <div class="actions"><a href="${obs("Tasks/" + t.name)}">Open in Obsidian</a>${t.parent_name ? `<button data-go="${esc(t.parent_name)}">Parent: ${esc(t.parent_name)}</button>` : ""}</div>`;
+  $("#panel").classList.add("open");
+}
+
+let queue = Promise.resolve();                 // saves run one at a time, each against the latest version
+function save(name, changes) {
+  queue = queue.then(() => doSave(name, changes)).catch(() => {});
+  return queue;
+}
+async function doSave(name, changes) {
+  const t = byName()[name]; if (!t) return;
+  let r, j;
+  try {
+    r = await fetch("/api/update", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({name, version: t.version, changes})});
+    j = await r.json();
+  } catch (e) { toast("Not saved: can't reach the board server"); await load(); return; }
+  if (r.status === 409) { toast("Changed elsewhere, reloaded"); await load(); if (S.open === name) openPanel(name); return; }
+  if (!r.ok) { toast("Not saved: " + (j.error || r.status)); await load(); return; }
+  await load();
+  if (S.open === name) { if (j.task) openPanel(name); else { $("#panel").classList.remove("open"); S.open = null; } }
+}
+
+document.addEventListener("click", async e => {
+  const tab = e.target.closest("[data-v]"); if (tab) { S.view = tab.dataset.v; render(); return; }
+  const proj = e.target.closest(".project"); if (proj && !e.target.closest(".t")) { const n = proj.dataset.proj; S.collapsed.has(n) ? S.collapsed.delete(n) : S.collapsed.add(n); render(); return; }
+  const go = e.target.closest("[data-go]"); if (go) { openPanel(go.dataset.go); return; }
+  const title = e.target.closest(".t"); if (title) { openPanel(title.dataset.name || title.closest("[data-name]").dataset.name); return; }
+  if (e.target.closest(".close")) { $("#panel").classList.remove("open"); S.open = null; }
+});
+document.addEventListener("change", async e => {
+  const f = e.target.closest("[data-f]"); if (f) { S.filters[f.dataset.f] = f.value; render(); return; }
+  const cb = e.target.closest('.task input[type=checkbox]'); if (cb && LIVE) { await save(cb.closest("[data-name]").dataset.name, {[STATUS_KEY]: cb.checked ? "done" : "todo"}); return; }
+  const k = e.target.closest("[data-k]"); if (k && LIVE && S.open && !k.dataset.blur) { await save(S.open, {[k.dataset.k]: k.value}); }
+});
+document.addEventListener("focusout", async e => {   // the date input saves when you leave it, not on every keystroke
+  const k = e.target.closest("[data-blur]"); if (k && LIVE && S.open && k.value !== (byName()[S.open]?.due || "")) { await save(S.open, {[k.dataset.k]: k.value}); }
+});
+let dumping = false;
+$("#dump").addEventListener("keydown", async e => {
+  if (e.key !== "Enter" || e.shiftKey) return;
+  e.preventDefault();
+  if (!LIVE) { toast("Snapshot: brain dump needs the live board"); return; }
+  const lines = $("#dump").value; if (!lines.trim() || dumping) return;
+  dumping = true;
+  try {
+    const r = await fetch("/api/add", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({lines})});
+    const j = await r.json();
+    $("#dump").value = j.errors.length ? j.errors.map(x => x.split(": ").slice(0, -1).join(": ") || x).join("\n") : "";
+    toast(`${j.created.length} added to Inbox${j.errors.length ? `, ${j.errors.length} not added (${j.errors[0]})` : ""}`);
+    await load();
+  } catch (e) { toast("Not added: can't reach the board server"); }
+  finally { dumping = false; }
+});
+if (!LIVE) $("#dump").placeholder = "Snapshot: open the live board to add tasks";
+load();
+</script>
+</body>
+</html>
