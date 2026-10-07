@@ -1,50 +1,76 @@
 # Second Brain
 
-A folder that remembers. Plain markdown files, a few small scripts, and Claude Code pointed at the folder. Claude reads who you are and what you're working on before it answers, files what you throw at it, keeps your task list, and writes down what changed at the end of every session.
+A folder that remembers. It's plain markdown files, a few small scripts, and Claude Code opened in the folder. Before it answers, Claude reads who you are and what you're working on. It files what you throw at it, keeps your task list and reminders, and writes down what changed at the end of every session.
 
-Nothing is hosted anywhere. The folder is the system.
+Your notes are files on your computer, not inside someone's app. Claude reads the ones it needs over the internet each session, like any Claude chat.
 
 ## What you need
 
-- A Mac or Windows PC.
-- [Claude Code](https://claude.com/claude-code) (needs a Claude Pro or Max subscription).
-- Python 3.9 or newer. Macs have it. On Windows, install it from python.org and tick "Add to PATH"; the command there is `python`, so wherever these notes say `python3`, type `python`.
-- A Google account. Reminders and quick capture from your phone use Google Tasks.
-- [Obsidian](https://obsidian.md) (free). Optional, but it makes the notes readable and the links clickable.
+- **A Mac or Windows computer.**
+- **Claude Code**, which needs a Claude Pro or Max plan. The easiest way in is the **Code** tab in the [Claude desktop app](https://claude.com/download), which needs no terminal. The [terminal version](https://claude.com/claude-code) works too. Pro has usage limits, and setup uses a good share of one session.
+- **Python 3.9 or newer.** It runs the task board, and you never touch it yourself.
+  - On a Mac, the first time it's used you may get a pop-up offering to install Apple's developer tools. Click Install.
+  - On Windows, install it from python.org and tick "Add to PATH".
+- **[Obsidian](https://obsidian.md)** (free, optional): see below.
+- **A Google account** (optional). Connecting Google Calendar puts your day in the morning briefing. Connecting Google Tasks gives you a list on your phone to capture things into while you're out.
 
 ## Start
 
-1. Get this folder onto your computer. Either click **Use this template** above (needs a GitHub account), or **Code → Download ZIP** and unzip it somewhere sensible, like `Documents/Second Brain`.
-2. Open a terminal in that folder and run `claude`. (Mac: open Terminal, type `cd `, drag the folder onto the window, press Enter. Windows: open the folder in Explorer, click the address bar, type `cmd`, press Enter.)
-3. Say: **"Set me up."**
+1. **Get the folder.** Click **Code → Download ZIP** above, unzip it, and put it somewhere sensible like `Documents/Second Brain`. If you know GitHub, **Use this template** also works, but make your copy private: it will hold notes about you.
+2. **Open it in Claude Code.** In the desktop app, go to the Code tab and choose the folder. In a terminal, go to the folder and run `claude`:
+   - Mac: open Terminal, type `cd `, drag the folder onto the window, and press Enter.
+   - Windows: open the folder in Explorer, click the address bar, type `cmd`, and press Enter.
+3. **Say "Set me up."**
 
-Claude reads `SETUP.md`, interviews you for about twenty minutes, and builds the folder around your answers. You approve what it writes about you before anything else happens.
+Claude reads `SETUP.md`, interviews you, and builds the folder around your answers. It takes about an hour, most of it talking. You approve what it writes about you before anything else happens.
 
-That's it. Everything after that is a conversation: "what's on today?", "file this", "add a task", "what did we decide last time?".
+Claude asks before it runs things on your computer. The folder's own scripts are pre-approved, so most of what it asks during setup is a one-off, and it's fine to say yes. If setup gets interrupted, open the folder again and say "carry on": it picks up where it stopped.
 
-## What's in the box
+After that, everything is a conversation: "what's on today?", "file this", "remind me to call the bank on Friday", "what did we decide?".
+
+## How it's organised
+
+PARA, with one change. In the original, a project is anything with a finish line, so a business would be an area. Here, Projects is your work and Areas is your life, and the finish-line things live inside them as goals and tasks. We found that easier to live with.
 
 | | |
 |---|---|
-| `CLAUDE.md` | The rules Claude follows in this folder. Short on purpose. |
-| `SETUP.md` | The one-time setup Claude runs for you. |
-| `Me.md` | Who you are and how you work. Written from the interview. Yours. |
-| `Map.md` | Where everything lives. |
 | `Inbox/` | Anything, unfiled. Claude sorts it. |
-| `Projects/` | One folder per thing you're building or running. |
-| `Areas/` | Ongoing parts of life with no end date: health, money, home. |
-| `Resources/` | Reference, ideas, research. |
-| `Tasks/` | One note per task, and the board that shows them. |
-| `Archive/` | Finished or dead. Nothing is deleted. |
-| `Scripts/` | The task board and two helpers. Python, no installs. |
+| `Projects/` | Your work: a business, a side business, client work, something you're building. One folder each. |
+| `Areas/` | Your life: health, money, home, family, the day job, study. One folder each. |
+| `Resources/` | Reference, research and ideas, plus a To watch list. |
+| `Tasks/` | One note per task, goal or reminder, and the board that shows them. |
+| `Archive/` | Finished or dead. Finished things are never deleted. |
+| `Me.md` | Who you are and how you work. Written from the interview. Yours: Claude only changes it when you ask. |
+| `Map.md` | Where everything lives. |
+| `CLAUDE.md` | The rules Claude follows in this folder. Short on purpose. |
+| `SETUP.md` | The setup Claude runs for you. |
+| `Scripts/` | The task board and two helpers. Python, nothing to install. |
+| `.claude/settings.json` | Pre-approves the folder's own scripts, so Claude doesn't ask every time. |
+
+**Tasks, goals and reminders.** A task is a piece of work. A goal is a finish line with tasks under it ("Sell the flat"). A reminder is a nudge on a date ("Call mum on Friday") and lives in its own list, so it doesn't clog the work. The test: if you'd want to know later that it was done and why, it's a task; if you only need not to forget it, it's a reminder.
+
+## Links and Obsidian
+
+Notes link to each other with `[[double brackets]]`. Claude makes those links whether or not you use Obsidian, because they're how it finds its way around the folder.
+
+Obsidian is a free notes app that opens this folder as it is. It makes the links clickable, draws the graph of how things connect, and shows each project's tasks as a table inside its note (that needs Obsidian 1.9 or later). Without it, the notes are still plain text you can open in anything, and the board still shows every task; you just lose the clicking and the tables.
 
 ## The task board
 
-```
-python3 Scripts/tasks_board.py serve
-```
+Say "open the board", and Claude starts it and gives you http://127.0.0.1:8765/. It has:
+- a box at the top for dumping thoughts;
+- Today;
+- your reminders;
+- the decisions waiting on you;
+- everything grouped by project and area.
 
-then open http://127.0.0.1:8765/ in your browser. Or just tell Claude "open the board". It runs while that terminal is open; close it and the board goes away until next time, but your tasks are files and lose nothing. A brain-dump box, your day, your decisions, and everything grouped by project. On your phone, `Tasks/Board.html` is a read-only copy that updates every time Claude syncs tasks; it opens from any folder-syncing app (Google Drive, Dropbox, iCloud).
+It runs while that Claude session is open. When the session closes, the board goes too, but your tasks are files and lose nothing.
+
+If the folder syncs to your phone (iCloud Drive, OneDrive, Dropbox, Google Drive), `Tasks/Board.html` is a read-only copy you can open there. It updates each time Claude syncs your tasks.
+
+## Backup and history
+
+It's a folder, so back it up the way you back up anything else. If it lives in iCloud Drive, OneDrive, Dropbox or Google Drive, it's already copied. If you'd like a history of every change, make it a git repo; Claude will commit at the end of each session.
 
 ## Made by
 

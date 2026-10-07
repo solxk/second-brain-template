@@ -1,24 +1,34 @@
 # SETUP.md
 
-Instructions for Claude. Run this once, the first time the owner says "set me up" (or whenever `Me.md` is missing). The owner reads only `README.md`; everything below is yours to carry out. Work through the steps in order and say which step you're on.
+Instructions for Claude. Run this the first time the owner says "set me up", and whenever `vault.json` doesn't say `"setup": "done"`. The owner reads only `README.md`; everything below is yours to carry out.
+
+Work through the steps in order and say which step you're on. After each step, record it in `vault.json` as `"setup": "<step number>"`, so a closed window or a usage limit costs nothing. Next time, carry on from the step after the one recorded. The whole thing takes about an hour, most of it talking.
 
 ## 0. Check the ground
 
 Before any questions:
 
-- Find Python. Try `python3 --version`, then `python --version`, then `py --version`. Needs 3.9 or newer. On Windows the working command is usually `python` (a `python3` stub there opens the Microsoft Store; ignore it). Remember which command worked and use it for every command below and in every session; store it in `vault.json` as `"python"` in step 2. If none works, tell the owner to install Python from python.org with "Add to PATH" ticked, then come back.
-- Run `python3 -m unittest Scripts/test_tasks.py Scripts/test_tasks_board.py`. Both should print `OK`.
-- Check whether this folder is a git repo (`git status`). If not, run `git init`. If `git config user.name` prints nothing, set it for this folder only: `git config user.name "<their name>"` and `git config user.email "<their email>"` (ask; any email works). Explain in one line that this keeps a history of every change. Commit at the end of setup.
-- Ask whether Obsidian is installed. It isn't required; the board is the view of tasks either way. If they have it: File → Open folder as vault → this folder. If they don't, recommend it once and move on; the `![[Tasks.base#Here]]` lines in folder notes are for Obsidian and do nothing elsewhere, which is fine.
+- **Find Python.** Try `python3 --version`, then `python --version`, then `py --version`. It needs 3.9 or newer.
+  - On a fresh Mac, the first `python3` may open an Apple pop-up offering to install developer tools. Tell the owner to click Install, wait a few minutes, then carry on.
+  - On Windows the working command is usually `python`. A `python3` stub there opens the Microsoft Store; ignore it.
+  - If none works, tell the owner to install Python from python.org with "Add to PATH" ticked, then come back.
+  - Use whichever command worked for every command below and in every session, and store it in `vault.json` as `"python"`.
+- **Run the tests**: `python3 -m unittest Scripts/test_tasks.py Scripts/test_tasks_board.py Scripts/test_check_wiki_links.py`. They should end with `OK`.
+- **Explain the permission prompts** in one line. Claude asks before running commands; this folder's own scripts are pre-approved in `.claude/settings.json`, and edits inside the folder go through without asking.
+- **Ask whether Obsidian is installed.** It isn't required: the board shows the tasks either way.
+  - If they have it: File → Open folder as vault → this folder.
+  - If they don't, recommend it once and move on. The `![[Tasks.base#Here]]` lines in folder notes are for Obsidian (1.9 or later) and do nothing elsewhere, which is fine.
 
 ## 1. The interview
 
-About twenty minutes. One question at a time, in plain words, no jargon. Follow up when an answer is thin; move on when it's enough. Ask about anything ambiguous ("the 18th" of which month?) rather than guess. **Write each answer into `Me.md` as you go** as rough notes under the headings in section 2, so a crash or a long chat loses nothing. Section 2 is where it becomes the finished file.
+About twenty minutes. Ask one question at a time, in plain words, with no jargon. Follow up when an answer is thin; move on when it's enough. Ask about anything ambiguous ("the 18th" of which month?) rather than guess.
+
+Write each answer as rough notes into `Inbox/Setup notes.md` as you go. On a resume, read that file first and pick up at the first question without an answer.
 
 Who they are:
-1. What do you do, and what are you juggling right now? (Job, side projects, family admin, health, study: anything that takes attention. Get a list; these become the first projects and areas. The day job gets an area only if there will be tasks for it.)
-2. For each thing on that list: is it something with a finish line, or something ongoing? (Finish line → `Projects/`. Ongoing → `Areas/`. Group related ongoing things into one area: gym and sleep are both Health.)
-3. What's the goal for the next year, if you had to say it in a sentence?
+1. What are you working on or building? (A business, a side business, client work, something you're making. Each becomes a folder in `Projects/`.)
+2. What parts of your life need looking after? (Health, money, home, family, the day job, study. Each becomes a folder in `Areas/`. Group related things: gym and sleep are both Health. The day job gets an area only if there will be tasks for it.)
+3. What would you like to have done a year from now, in a sentence?
 
 How they work:
 4. When does your work day start, and when are you sharpest?
@@ -27,81 +37,120 @@ How they work:
 
 Logistics:
 7. Where do your calendar, email, tasks and reminders live today? (Google, Outlook, Apple, a notebook, nowhere.)
-8. Mac or Windows? Which phone? Does any computer stay on all day?
-9. Which Google account should the system use? (Gmail is simplest. A Hotmail address works for mail, but reminders need Google Tasks, so a Google account is needed regardless.)
+8. Mac or Windows? Which phone?
 
 Close:
-10. Anything about you that an assistant usually gets wrong?
+9. Anything about you that an assistant usually gets wrong?
+
+Something with a finish line ("sell the flat", "launch the shop") isn't a folder. It belongs inside the project or area it's part of, and becomes a goal or a task later.
 
 ## 2. Write Me.md and get it approved
 
-Turn the rough notes into the finished `Me.md`: the owner's file, in their words, first person, tool-agnostic (no mention of Claude or this folder's mechanics). Only what they said; a heading with nothing under it is left out. Logistics (machines, phone, where calendar and email live) go in a short "Tools" section at the end. Shape:
+Write `Me.md` from the notes. It's the owner's file: in their words, first person, and tool-agnostic (no mention of Claude or this folder's mechanics). Include only what they said, and leave out any heading with nothing under it.
+
+The list of projects and areas doesn't go in `Me.md`. It goes into `Map.md` and the folders in step 3. `Me.md` is read every session and Claude can't edit it, so a list kept there would go stale.
+
+Shape:
 
 ```markdown
 # Me
 
 > Written from the setup interview on <date>. This file is mine. Any AI I use reads it first.
 
-I'm <name>. <One paragraph: what they do and what they're juggling.>
+I'm <name>. <One paragraph: what they do and, in a line, what they're juggling.>
 
-## What I'm working on
-<One line per project or area, with the finish line or the ongoing nature.>
-
-## Goal
+## This year
 <The one-year sentence.>
 
 ## How I work
-<Day shape, when they're sharpest, how they like to be worked with.>
+<Day shape, when they're sharpest.>
 
 ## What trips me up
 <Their answer, plainly.>
 
 ## What I want from an AI partner
-<Their answer. Direct or gentle. What to push on, what to leave alone.>
+<Their answer. Direct or gentle. What to push on, what to leave alone. What assistants usually get wrong about them.>
+
+## Tools
+<Mac or Windows, phone, where calendar, email and reminders live.>
 ```
 
-Show it to them. Ask them to read it and correct anything. Don't build anything until they say it's right. Then write `vault.json` at the root:
-
-```json
-{"owner": "<first name as they'd write it>", "vault_name": "<this folder's name>", "python": "<python3 or python, whichever worked in step 0>"}
-```
+Show it to them. Ask them to read it and correct anything. Don't build anything until they say it's right. Then update `vault.json` with `"owner"` (their first name, as they'd write it) and `"vault_name"` (this folder's name), and keep the other keys.
 
 ## 3. Build the structure
 
-From the approved `Me.md`:
+From the notes:
 
-- One folder per project under `Projects/<Name>/` with a folder note `Projects/<Name>/<Name>.md`: frontmatter `status: active`, `one-liner:`, `created-by: claude`; sections **What it is** (two or three sentences from the interview), **Next actions** containing exactly `![[Tasks.base#Here]]`, **Recently shifted** (one dated line: "set up"), **Loose ends**, **Key links**.
-- One folder per area under `Areas/<Name>/` with the same folder note shape.
-- Rewrite `Map.md` so its tables list what actually exists now, one line each. Keep it short; it's a map, not an index.
-- Leave `Inbox/`, `Resources/`, `Archive/` and `Tasks/` as they are. Don't make `--kind project` items at setup; they come later when a group of tasks clearly belongs together.
-- A habit they mentioned (sleep, gym days) goes under Loose ends in its area's folder note, not into tasks.
+- **Projects.** Make one folder per thing they're working on or building: `Projects/<Name>/`, with a folder note `Projects/<Name>/<Name>.md`.
+  - Frontmatter: `status: active`, `one-liner:`, `created-by: claude`.
+  - Sections: **What it is** (two or three sentences from the interview), **Next actions** (containing exactly `![[Tasks.base#Here]]`), **Recently shifted** (one dated line: "set up"), **Loose ends** and **Key links**.
+- **Areas.** Make one folder per part of life they named, `Areas/<Name>/`, with the same folder-note shape.
+- **Habits** they mentioned (sleep, gym days) go under Loose ends in their area's folder note, not into tasks.
+- **Map.md.** Rewrite its "Projects and areas" section so it lists what exists now, one line each. Keep it short; it's a map, not an index.
+- **No goals yet.** Don't make any goals (`kind: project`) at setup. They come later, when a group of tasks clearly belongs together.
 
-Run `python3 Scripts/check_wiki_links.py`. Fix anything it reports.
+Run `python3 Scripts/check_wiki_links.py` and fix anything it reports.
 
-## 4. Connect Google
+## 4. Connect Google, if they want to
 
-Tell the owner, in plain words, that Claude will read their calendar and Gmail and manage a Google Tasks list, and that each connection needs a one-click sign-in from them. If they already use another reminders app, say why this one: it's the one Claude can read and write from the folder, so a thought typed on the phone reaches the folder without them copying it. Then:
+Everything works without this. Say in plain words what each connection adds, and let them choose:
 
-- Connect **Google Calendar**, **Gmail** and **Google Tasks** through the connectors available in this Claude Code session (the `/mcp` command or Settings → Connectors in the desktop app; Google Tasks may come through a connector hub such as Composio). Expect one browser sign-in per connection. If a connector isn't available here, say so plainly and skip it; the folder works without it, and reminders then live as a checklist in `Inbox/Inbox.md` and links under "To watch" in `Resources/Resources.md` until it is connected.
-- In Google Tasks, create two lists: **Inbox** (anything captured while out) and **To watch** (videos and articles). The default **My Tasks** list holds dated reminders.
-- Tell them to install the Google Tasks app on their phone: anything they add to **Inbox** there gets filed at the start of the next session, and the share sheet drops a link straight into **To watch**.
+- **Google Calendar.** "What's on today?" then includes your day.
+- **Google Tasks.** A **Phone** list you can type into on your phone while you're out; Claude files whatever's in it at the start of the next session. Also a **To watch** list that the phone's share button can drop links into.
 
-## 5. Brain dump into tasks
+Gmail isn't needed.
 
-Ask: "Everything on your mind that needs doing, big or small, one per line. Don't sort it." Then, for each line, propose one of: a **task** (which project or area, priority with a one-line reason, effort, whether it's a decision), a **reminder** (Google Tasks My Tasks, with a date), a **To watch** entry (a link or video), or a **habit** (Loose ends in the area note). Ask about any date that isn't certain. Show the proposed list as a table. Apply their corrections. Create the tasks with `python3 Scripts/tasks.py add ...` and the rest where they belong.
+If they want it:
+1. Ask which Google account to use.
+2. Connect through the connectors available in this Claude Code session: the `/mcp` command, or Settings → Connectors in the desktop app. Expect one browser sign-in per connection. Google Tasks may only be available through a connector hub such as Composio. That's a separate service holding the sign-in, so say so plainly before they agree.
+3. In Google Tasks, create the **Phone** and **To watch** lists, and tell them to install the Google Tasks app on their phone.
+4. Reminders stay in the folder unless they'd rather have them in Google Tasks (or Microsoft To Do, if they live in Outlook and a connector exists). In that case dated reminders go in the default **My Tasks** list.
+
+If a connector isn't available here, say so and move on.
+
+Without Google, phone capture is simple: note it however you already do (Notes, a message to yourself), and paste it in at the next session.
+
+## 5. Brain dump
+
+Ask: "Everything on your mind that needs doing, big or small, one per line. Don't sort it."
+
+Then, for each line, propose one of:
+- a **task**: which project or area, a priority with a one-line reason, the effort, and whether it's a decision;
+- a **reminder**: a date, no folder needed;
+- a **To watch** entry: a link or video;
+- a **habit**: Loose ends in the area note.
+
+Ask about any date that isn't certain. Show the proposed list as a table and apply their corrections. Then create everything: tasks with `python3 Scripts/tasks.py add ...`, reminders with `add "..." --kind reminder --due <date>`, and the rest where it belongs.
+
+Then add two reminders of your own, and tell them why:
+- "Re-read Me.md and fix whatever's drifted", one month from today;
+- "What haven't I used? Cut it", two weeks from today. Anything they never touch is worth removing.
 
 ## 6. First arrival
 
-- Run `python3 Scripts/tasks.py sync`, then `python3 Scripts/tasks.py brief`.
-- Start the board: `python3 Scripts/tasks_board.py serve` in the background, and tell them to open http://127.0.0.1:8765/. Walk them through it in four sentences: the brain-dump box, Today, Board, Decisions. Say that it runs while this terminal is open, and that "open the board" in any session brings it back.
-- Explain the two rituals in plain words: at the start of a session Claude briefs them; at the end it writes down what changed and what's next. They never file anything themselves.
-- Explain the phone: capture goes into the Google Tasks Inbox list; `Tasks/Board.html` is a read-only copy of the board if the folder syncs to their phone.
-- Commit: `git add -A && git commit -m "Set up"`.
-- End by saying what to try tomorrow: open a session, say "what's on today?".
+1. Run `python3 Scripts/tasks.py sync`, then `python3 Scripts/tasks.py brief`.
+2. Start the board: run `python3 Scripts/tasks_board.py serve` in the background, and tell them to open http://127.0.0.1:8765/. Walk them through it in four sentences:
+   - the brain-dump box;
+   - Today;
+   - Reminders;
+   - Board, with Decisions next to it.
+
+   Say that it runs while this session is open, and that "open the board" in any session brings it back.
+3. Explain the two rituals in plain words:
+   - At the start of a session, Claude briefs them.
+   - At the end, they say "what did we decide?" or "wrap up", and Claude writes down what changed and what's next.
+
+   They never file anything themselves.
+4. Explain the phone:
+   - capture goes to the Phone list (step 4), or gets pasted in later;
+   - if the folder syncs to their phone, `Tasks/Board.html` is a read-only copy of the board.
+5. Explain backup in one line: it's a folder, so back it up like any other. If it lives in iCloud Drive, OneDrive, Dropbox or Google Drive, it's already copied. If they ever want a history of every change, it can become a git repo, and Claude will commit at the end of each session.
+6. Delete `Inbox/Setup notes.md` and set `"setup": "done"` in `vault.json`.
+7. End by saying what to try tomorrow: open a session and say "what's on today?".
 
 ## What not to do
 
-- Don't ship rules from anyone else's vault. `CLAUDE.md` grows only when something goes wrong here.
+- Don't ship rules from anyone else's folder. `CLAUDE.md` grows only when something goes wrong here.
 - Don't create an "Ideas" or "Someday" structure in advance. Add a folder when they feel the absence of it.
 - Don't put anything in `Me.md` they didn't say.
-- Don't set up anything that needs an always-on computer. If they have one, that's a later conversation.
+- Don't set up git or anything that needs an always-on computer. Both are later conversations, if they want them.
