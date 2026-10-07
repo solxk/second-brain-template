@@ -446,16 +446,17 @@ class Reminders(unittest.TestCase):
         self.assertEqual([t["title"] for t in v["today"]], ["Real work"])
         self.assertEqual([t["title"] for t in v["reminders"]], ["Call mum", "Buy sandpaper"])
 
-    def test_brief_lists_reminders_due_by_today_on_their_own(self):
+    def test_brief_lists_reminders_from_two_days_ahead_on_their_own(self):
         make(self.tmp, "Late nudge", kind="reminder", project=None, due="2026-10-05")
         make(self.tmp, "Today nudge", kind="reminder", project=None, due="2026-10-07")
+        make(self.tmp, "Friday nudge", kind="reminder", project=None, due="2026-10-09")
         make(self.tmp, "Next week nudge", kind="reminder", project=None, due="2026-10-12")
         make(self.tmp, "Late task", due="2026-10-01")
         b = T.brief(self.tmp, self.today)
-        self.assertEqual([t["title"] for t in b["reminders"]], ["Late nudge", "Today nudge"])
+        self.assertEqual([t["title"] for t in b["reminders"]], ["Late nudge", "Today nudge", "Friday nudge"])
         self.assertEqual([t["title"] for t in b["overdue"]], ["Late task"])
         self.assertEqual(b["soon"], [])
-        self.assertIn("Reminders for today (2)", T.format_brief(b, self.today))
+        self.assertIn("Reminders, today and the next 2 days (3)", T.format_brief(b, self.today))
 
     def test_reminders_are_never_stale(self):
         make(self.tmp, "Far nudge", kind="reminder", project=None, due="2026-12-01", updated="2026-08-01")
@@ -481,6 +482,28 @@ class BriefWording(unittest.TestCase):
     def test_unsorted_section_matches_the_board(self):
         make(self.tmp, "Half a thought", status="inbox", project=None)
         self.assertIn("To sort (1)", T.format_brief(T.brief(self.tmp, self.today), self.today))
+
+
+class DryRunFixes(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.today = date(2026, 10, 7)
+
+    def test_brief_counts_reminders_apart_from_work(self):
+        make(self.tmp, "Work")
+        make(self.tmp, "Nudge", kind="reminder", project=None, due="2026-10-20")
+        b = T.brief(self.tmp, self.today)
+        self.assertEqual(b["counts"]["todo"], 1)
+        self.assertIn("counts: todo 1, reminders 1", T.format_brief(b, self.today))
+
+    def test_list_marks_goals_and_reminders(self):
+        make(self.tmp, "Sell the flat", kind="project")
+        make(self.tmp, "Call mum", kind="reminder", project=None, due="2026-10-09")
+        make(self.tmp, "Get a valuation")
+        text = T.format_list(T.list_tasks(self.tmp))
+        self.assertIn("Sell the flat  (goal)", text)
+        self.assertIn("Call mum  (reminder)", text)
+        self.assertIn("Get a valuation\n", text)
 
 
 class StaleCap(unittest.TestCase):

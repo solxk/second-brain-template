@@ -21,7 +21,7 @@ Curated by hand. Update when the structure changes, not on a schedule.
 | `Inbox/` | Unfiled capture. Empty means processed. |
 | `Projects/` | Work: one folder per business, side business, client or thing being built. Folder note named after the folder. |
 | `Areas/` | Life: one folder per part of it (health, money, home, family, the day job, study). Same shape. |
-| `Resources/` | Reference, research, ideas, and the To watch list. |
+| `Resources/` | Reference, research, ideas, the To watch list, and `People/` (a note per person who keeps coming up). |
 | `Tasks/` | One note per task, goal or reminder. `Tasks.md` explains them; `Tasks.base` holds the Obsidian views; `Board.html`, the phone snapshot, appears after the first sync. |
 | `Archive/` | Finished or dead. |
 | `Scripts/` | `tasks.py` (add, sync, brief, list), `tasks_board.py` (the board, serve and export), `check_wiki_links.py`, and their tests. |

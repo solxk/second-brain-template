@@ -22,7 +22,9 @@ Three levels, no deeper:
 
 Only a goal can have tasks under it, and a goal can't sit under another goal. `sync` reports anything else.
 
-A **reminder** is a task note with `kind: reminder`: a nudge on a date, no folder needed. Reminders never show in Today. They have their own list on the board and their own line in the brief.
+A **reminder** is a task note with `kind: reminder`: a nudge on a date, no folder needed. Its date is the day it's for ("school trip money, Friday" is Friday); the brief starts showing it two days before. Reminders never show in Today. They have their own list on the board and their own section in the brief.
+
+Nothing repeats on its own. Something weekly (a long run on Sundays) is a habit, kept under Loose ends in its area, or a repeating event in the owner's calendar.
 
 On screen, a `kind: project` note is called a **goal**, so say "goal" to the owner. The word comes from `"labels"` in `vault.json`.
 
@@ -33,6 +35,8 @@ On screen, a `kind: project` note is called a **goal**, so say "goal" to the own
 - `due` is a real deadline only, or a reminder's day. Scheduling is a calendar conversation.
 - `priority` is high, normal or low, proposed by Claude with a one-line reason in the note. Never change a due date or priority the owner set without saying so.
 - `blocked` is worked out from `depends-on` by `sync`. Never type it.
+- `owner` is the owner's name. Set it to someone else's (`--owner Dev`) when the next move is theirs; the task then shows under Waiting on others.
+- A title's `: ? / " *` and similar characters become `-` in its filename ("Decide: X?" is saved as `Decide- X-.md`). Links use the filename; the board and the brief show the title.
 - `task-status`:
   - `inbox` means to sort;
   - `todo`, `doing`, `blocked` and `someday` mean what they say;

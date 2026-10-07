@@ -40,6 +40,7 @@ Claude may create and edit anything in `Inbox/`, `Projects/`, `Areas/`, `Resourc
 
 - Every note names the projects, areas, people and companies it involves as `[[wiki links]]`, in the same turn it's written. Link named things, never topics: `[[Acme pitch]]`, not "marketing". Links are how you find your way around this folder, whether or not the owner uses Obsidian.
 - A `[[link]]` only resolves if a note with that exact filename exists. If it doesn't, create a stub rather than leave a dead link.
+- People who keep coming up get a note in `Resources/People/`, and are linked from then on. Someone mentioned once stays plain text.
 - The folder note of anything a note affects gets the consequence: a status change, a next action, a line under "Recently shifted".
 
 ## Conventions
@@ -48,3 +49,4 @@ Claude may create and edit anything in `Inbox/`, `Projects/`, `Areas/`, `Resourc
 - Plain markdown and wiki links. A fact lives in one place; other notes point at it. Every note Claude writes gets `created-by: claude` in its frontmatter. No new top-level folders without asking.
 - Explain anything technical in plain words: what it does for the owner first, the mechanism second.
 - Commands here say `python3`. Use whatever `vault.json` records as `"python"` (on Windows it's usually `python`).
+- Run the folder's scripts as plain commands from the folder root: no `cd`, `&&`, `;` or pipes. That's what keeps them pre-approved; anything chained asks the owner for permission.

@@ -3,7 +3,7 @@ created-by: claude
 ---
 # Resources
 
-Reference, research and ideas that aren't tied to one project or area. An idea becomes a project folder when work on it starts.
+Reference, research and ideas that aren't tied to one project or area. An idea becomes a project folder when work on it starts. People who keep coming up get a note each in `People/`.
 
 ## To watch
 

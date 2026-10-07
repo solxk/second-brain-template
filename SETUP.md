@@ -14,20 +14,21 @@ Before any questions:
   - If none works, tell the owner to install Python from python.org with "Add to PATH" ticked, then come back.
   - Use whichever command worked for every command below and in every session, and store it in `vault.json` as `"python"`.
 - **Run the tests**: `python3 -m unittest Scripts/test_tasks.py Scripts/test_tasks_board.py Scripts/test_check_wiki_links.py`. They should end with `OK`.
-- **Explain the permission prompts** in one line. Claude asks before running commands; this folder's own scripts are pre-approved in `.claude/settings.json`, and edits inside the folder go through without asking.
+- **Explain the permission prompts** in one line. Claude asks before running commands; this folder's own scripts are pre-approved in `.claude/settings.json`, and edits inside the folder go through without asking. The pre-approvals only work once the owner has said yes to "do you trust this folder?". If every script run asks for permission, that's why: tell them to reopen the folder and accept it.
 - **Ask whether Obsidian is installed.** It isn't required: the board shows the tasks either way.
   - If they have it: File → Open folder as vault → this folder.
   - If they don't, recommend it once and move on. The `![[Tasks.base#Here]]` lines in folder notes are for Obsidian (1.9 or later) and do nothing elsewhere, which is fine.
+  - Start `Inbox/Setup notes.md` with their answer, so a resumed setup knows it.
 
 ## 1. The interview
 
 About twenty minutes. Ask one question at a time, in plain words, with no jargon. Follow up when an answer is thin; move on when it's enough. Ask about anything ambiguous ("the 18th" of which month?) rather than guess.
 
-Write each answer as rough notes into `Inbox/Setup notes.md` as you go. On a resume, read that file first and pick up at the first question without an answer.
+Append each answer to `Inbox/Setup notes.md` the moment it's given, before you ask the next question. On a resume, read that file first and pick up at the first question without an answer.
 
 Who they are:
 1. What are you working on or building? (A business, a side business, client work, something you're making. Each becomes a folder in `Projects/`.)
-2. What parts of your life need looking after? (Health, money, home, family, the day job, study. Each becomes a folder in `Areas/`. Group related things: gym and sleep are both Health. The day job gets an area only if there will be tasks for it.)
+2. What parts of your life need looking after? (Health, money, home, family, the day job, study. Each becomes a folder in `Areas/`. Group related things: gym and sleep are both Health. Make an area only where there will be something in it, a task, a reminder or a habit; the day job often has none.)
 3. What would you like to have done a year from now, in a sentence?
 
 How they work:
@@ -84,6 +85,7 @@ From the notes:
 - **Projects.** Make one folder per thing they're working on or building: `Projects/<Name>/`, with a folder note `Projects/<Name>/<Name>.md`.
   - Frontmatter: `status: active`, `one-liner:`, `created-by: claude`.
   - Sections: **What it is** (two or three sentences from the interview), **Next actions** (containing exactly `![[Tasks.base#Here]]`), **Recently shifted** (one dated line: "set up"), **Loose ends** and **Key links**.
+- **Freelancers.** A freelancer's regular clients each get a project folder when each brings its own stream of work. Otherwise make one folder for the freelance business, with clients as tasks. Ask if it isn't obvious.
 - **Areas.** Make one folder per part of life they named, `Areas/<Name>/`, with the same folder-note shape.
 - **Habits** they mentioned (sleep, gym days) go under Loose ends in their area's folder note, not into tasks.
 - **Map.md.** Rewrite its "Projects and areas" section so it lists what exists now, one line each. Keep it short; it's a map, not an index.
@@ -98,10 +100,10 @@ Everything works without this. Say in plain words what each connection adds, and
 - **Google Calendar.** "What's on today?" then includes your day.
 - **Google Tasks.** A **Phone** list you can type into on your phone while you're out; Claude files whatever's in it at the start of the next session. Also a **To watch** list that the phone's share button can drop links into.
 
-Gmail isn't needed.
+Gmail isn't needed: nothing here reads email. An email that matters gets forwarded to themselves and pasted into `Inbox/`. If their calendar is Outlook, say the briefing can't include it unless a Microsoft connector is available here.
 
 If they want it:
-1. Ask which Google account to use.
+1. Ask which Google account to use, and note it in the Tools section of `Me.md`.
 2. Connect through the connectors available in this Claude Code session: the `/mcp` command, or Settings → Connectors in the desktop app. Expect one browser sign-in per connection. Google Tasks may only be available through a connector hub such as Composio. That's a separate service holding the sign-in, so say so plainly before they agree.
 3. In Google Tasks, create the **Phone** and **To watch** lists, and tell them to install the Google Tasks app on their phone.
 4. Reminders stay in the folder unless they'd rather have them in Google Tasks (or Microsoft To Do, if they live in Outlook and a connector exists). In that case dated reminders go in the default **My Tasks** list.
@@ -116,9 +118,11 @@ Ask: "Everything on your mind that needs doing, big or small, one per line. Don'
 
 Then, for each line, propose one of:
 - a **task**: which project or area, a priority with a one-line reason, the effort, and whether it's a decision;
-- a **reminder**: a date, no folder needed;
+- a **reminder**: the day it's for, no folder needed;
 - a **To watch** entry: a link or video;
-- a **habit**: Loose ends in the area note.
+- a **habit**: Loose ends in the area note. If it has no area yet, offer to make one.
+
+Something that repeats (a long run every Sunday) is a habit, or a repeating event in their calendar: tasks and reminders don't repeat. Say so if it comes up.
 
 Ask about any date that isn't certain. Show the proposed list as a table and apply their corrections. Then create everything: tasks with `python3 Scripts/tasks.py add ...`, reminders with `add "..." --kind reminder --due <date>`, and the rest where it belongs.
 

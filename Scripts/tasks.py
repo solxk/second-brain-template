@@ -56,6 +56,7 @@ OPEN = {"todo", "blocked", "doing"}          # statuses that count as live work
 CLOSED = {"done", "dropped"}                 # satisfy nothing further; dropped archives on the next sync
 STALE_DAYS, SOON_DAYS, ARCHIVE_DAYS = 14, 7, 30
 STALE_SHOWN = 5                              # the brief lists this many stale tasks and counts the rest
+REMINDER_AHEAD = 2                           # the brief shows a reminder from this many days before its date
 
 WIKI = re.compile(r"\[\[([^\]|#]+)(?:[#|][^\]]*)?\]\]")
 NEEDS_QUOTE = re.compile(r'[\[\]:#"\'{}]|^[-?&*!|>%@`]|^\s|\s$')
@@ -415,7 +416,8 @@ def brief(folder: Path = TASKS_DIR, today: date | None = None) -> dict:
                        key=lambda t: t["due"]),
         "high": [t for t in live if t["priority"] == "high" and t[STATUS] != "blocked" and not t.get("due")
                  and t.get("kind") != "project"],
-        "reminders": sorted((t for t in nudges if t.get("due") and _parse_date(t["due"], "due") <= today),
+        "reminders": sorted((t for t in nudges if t.get("due")
+                             and _parse_date(t["due"], "due") <= today + timedelta(days=REMINDER_AHEAD)),
                             key=lambda t: (t["due"], t["title"])),
         "inbox": [t for t in tasks.values() if t[STATUS] == "inbox"],
         "decisions": sorted((t for t in live if is_decision(t)), key=lambda t: (t.get("created") or "", t["title"])),
@@ -424,7 +426,8 @@ def brief(folder: Path = TASKS_DIR, today: date | None = None) -> dict:
         "blocked": [t for t in live if t[STATUS] == "blocked"],
         "errors": [f"{p.name}: {e}" for p, e in errors],
         "in_both": in_both(folder) if folder.is_dir() else [],
-        "counts": {s: sum(1 for t in tasks.values() if t[STATUS] == s) for s in sorted(STATUSES)},
+        "counts": {**{s: sum(1 for t in tasks.values() if t[STATUS] == s and t.get("kind") != "reminder")
+                      for s in sorted(STATUSES)}, "reminders": len(nudges)},
     }
 
 
@@ -439,7 +442,7 @@ def _line(t: dict) -> str:
 def format_brief(b: dict, today: date) -> str:
     parts = [f"Task brief — {today.isoformat()}",
              "counts: " + (", ".join(f"{k} {v}" for k, v in b["counts"].items() if v) or "no tasks")]
-    sections = [("OVERDUE", "overdue"), ("Reminders for today", "reminders"), (f"Due in {SOON_DAYS} days", "soon"),
+    sections = [("OVERDUE", "overdue"), (f"Reminders, today and the next {REMINDER_AHEAD} days", "reminders"), (f"Due in {SOON_DAYS} days", "soon"),
                 ("High priority, undated, unblocked", "high"), ("Decisions waiting", "decisions"),
                 ("To sort", "inbox"),
                 ("Newly unblocked — sync will flip to todo", "unblocked"),
@@ -505,6 +508,12 @@ def add_task(folder: Path, today: date, title: str, project: str | None = None, 
     folder.mkdir(exist_ok=True)
     path.write_text(serialize(fm, body), encoding="utf-8")
     return path
+
+
+def format_list(rows: list[dict]) -> str:
+    marks = {"project": "  (goal)", "reminder": "  (reminder)"}
+    return "".join(f"{t[STATUS]:8} {t['priority']:6} {t.get('due') or '':10} "
+                   f"{link_name(t.get('project') or '—'):22} {t['title']}{marks.get(t.get('kind'), '')}\n" for t in rows)
 
 
 def list_tasks(folder: Path, project: str | None = None, status: str | None = None) -> list[dict]:
@@ -581,9 +590,7 @@ def main(argv: list[str] | None = None) -> int:
         print("created:", p.relative_to(VAULT))
         return 0
     if args.cmd == "list":
-        for t in list_tasks(TASKS_DIR, args.project, args.status):
-            print(f"{t[STATUS]:8} {t['priority']:6} {t.get('due') or '':10} "
-                  f"{link_name(t.get('project') or '—'):22} {t['title']}")
+        print(format_list(list_tasks(TASKS_DIR, args.project, args.status)), end="")
         return 0
     return 2
 

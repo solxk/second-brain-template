@@ -11,12 +11,14 @@
       "Bash(python3 Scripts/check_wiki_links.py:*)",
       "Bash(python Scripts/check_wiki_links.py:*)",
       "Bash(py Scripts/check_wiki_links.py:*)",
-      "Bash(python3 -m unittest Scripts/:*)",
-      "Bash(python -m unittest Scripts/:*)",
-      "Bash(py -m unittest Scripts/:*)",
       "Bash(python3 --version)",
       "Bash(python --version)",
-      "Bash(py --version)"
+      "Bash(py --version)",
+      "Bash(python3 -m unittest:*)",
+      "Bash(python -m unittest:*)",
+      "Bash(py -m unittest:*)",
+      "Bash(rm \"Inbox/Setup notes.md\")",
+      "Bash(rm 'Inbox/Setup notes.md')"
     ]
   }
 }

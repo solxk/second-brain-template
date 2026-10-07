@@ -24,7 +24,7 @@ Your notes are files on your computer, not inside someone's app. Claude reads th
 
 Claude reads `SETUP.md`, interviews you, and builds the folder around your answers. It takes about an hour, most of it talking. You approve what it writes about you before anything else happens.
 
-Claude asks before it runs things on your computer. The folder's own scripts are pre-approved, so most of what it asks during setup is a one-off, and it's fine to say yes. If setup gets interrupted, open the folder again and say "carry on": it picks up where it stopped.
+The first time you open the folder, Claude Code asks whether you trust it. Say yes: that's what switches on the folder's settings. After that, Claude still asks before it runs things on your computer. The folder's own scripts are pre-approved, so most of what it asks during setup is a one-off, and it's fine to say yes. If setup gets interrupted, open the folder again and say "carry on": it picks up where it stopped.
 
 After that, everything is a conversation: "what's on today?", "file this", "remind me to call the bank on Friday", "what did we decide?".
 
