@@ -6,12 +6,14 @@ Part of the Second Brain template. Run from the vault root:
   python3 Scripts/tasks_board.py serve [--host 127.0.0.1] [--port 8765]
   python3 Scripts/tasks_board.py export            # writes Tasks/Board.html, the read-only snapshot
 
-The server reads and writes task notes only through tasks.py. It listens on the laptop itself unless --host is
-given; an always-on machine passes its private-network (e.g. Tailscale) address. Nothing here is meant for the public internet.
+The server reads and writes task notes only through tasks.py. It listens on this computer only, unless --host
+says otherwise. Nothing here is meant for the public internet. Starting it while it is already running just says so.
 """
 from __future__ import annotations
 
 import argparse
+import errno
+import http.client
 import json
 import sys
 import threading
@@ -26,12 +28,15 @@ HTML = Path(__file__).with_name("tasks_board.html")
 SNAPSHOT = T.TASKS_DIR / "Board.html"
 MARKER = "/*BOARD_DATA*/"
 WRITE_LOCK = threading.Lock()                    # one writer at a time: version check, write and sync together
+DEFAULT_LABELS = {"task": "Task", "project": "Goal", "reminder": "Reminder"}   # what the board calls each kind;
+                                                 # vault.json "labels" overrides (e.g. {"project": "Project"})
 
 
 def board_tree(tasks: dict) -> dict:
-    """Open tasks grouped venture → open projects (with their open children) + loose tasks. A child whose
-    parent is not an open project is loose, so a filter on the page can never hide it."""
-    open_ = {n: t for n, t in tasks.items() if t[T.STATUS] in T.OPEN}
+    """Open tasks grouped by folder (project or area) → open goals (kind: project, with their open children)
+    + loose tasks. A child whose goal is not open is loose, so a filter on the page can never hide it.
+    Reminders are left out: they have their own list."""
+    open_ = {n: t for n, t in tasks.items() if t[T.STATUS] in T.OPEN and t.get("kind") != "reminder"}
     tree: dict = {}
     for name, t in sorted(open_.items(), key=lambda kv: (T.link_name(kv[1].get("project") or "—"), kv[0])):
         v = T.link_name(t["project"]) if t.get("project") else "—"
@@ -57,8 +62,11 @@ def task_json(t: dict) -> dict:
     return d
 
 
-def payload(folder: Path = T.TASKS_DIR, today: date | None = None, vault_name: str | None = None) -> dict:
+def payload(folder: Path = T.TASKS_DIR, today: date | None = None, vault_name: str | None = None,
+            labels: dict | None = None) -> dict:
     today = today or date.today()
+    if labels is None:
+        labels = T._config().get("labels") or {}
     tasks, errors = T.load_tasks(folder)
     v = T.views(tasks, today)
     return {
@@ -68,7 +76,8 @@ def payload(folder: Path = T.TASKS_DIR, today: date | None = None, vault_name: s
         "tasks": [task_json(t) for t in tasks.values()],
         "views": {k: [t["_path"].stem for t in rows] for k, rows in v.items()},
         "tree": board_tree(tasks),
-        "ventures": sorted({T.link_name(t["project"]) for t in tasks.values() if t.get("project")}),
+        "labels": {**DEFAULT_LABELS, **labels},
+        "folders": sorted({T.link_name(t["project"]) for t in tasks.values() if t.get("project")}),
         "projects": sorted(n for n, t in tasks.items() if t.get("kind") == "project" and t[T.STATUS] in T.OPEN),
         "errors": [f"{p.name}: {e}" for p, e in errors],
     }
@@ -188,17 +197,18 @@ def static_html(data: dict) -> str:
 
     def row(t, sub=False):
         return (f'<div class="task{" sub" if sub else ""}"><input type="checkbox" disabled{" checked" if t[T.STATUS] == "done" else ""}>'
-                f'<div class="t"><div>{_esc(t["title"])}</div><div class="meta">{_esc(t.get("project_name"))} · {_chips(t, today)}</div></div></div>')
+                f'<div class="t"><div>{_esc(t["title"])}</div><div class="meta">{_esc(t["project_name"]) + " · " if t.get("project_name") else ""}{_chips(t, today)}</div></div></div>')
 
     def section(title, names):
         rows = [row(by[n]) for n in names if n in by]
         return f'<div class="group">{title}</div>' + ("".join(rows) if rows else '<p class="empty">Nothing here.</p>')
 
-    parts = [section("Today", data["views"]["today"]), section("Decisions", data["views"]["decisions"]),
-             section("Waiting on others", data["views"]["waiting"]), section("Inbox", data["views"]["inbox"])]
+    parts = [section("Today", data["views"]["today"]), section("Reminders", data["views"]["reminders"]),
+             section("Decisions", data["views"]["decisions"]), section("Waiting on others", data["views"]["waiting"]),
+             section("To sort", data["views"]["inbox"])]
     board = ['<div class="group">Board</div>']
-    for venture, node in data["tree"].items():
-        board.append(f'<div class="group">{_esc(venture)}</div>')
+    for folder, node in data["tree"].items():
+        board.append(f'<div class="group">{_esc(folder)}</div>')
         for pr in node["projects"]:
             p = by.get(pr["name"])
             if p:
@@ -209,31 +219,59 @@ def static_html(data: dict) -> str:
 
 
 def export_snapshot(folder: Path = T.TASKS_DIR, today: date | None = None, out: Path = SNAPSHOT,
-                    vault_name: str | None = None) -> Path:
+                    vault_name: str | None = None) -> tuple[Path, bool]:
+    """Write the snapshot, only when it differs from the one on disk (a sync service then has nothing to
+    copy). Returns (path, written)."""
     with WRITE_LOCK:
         data = payload(folder, today, vault_name)
     blob = json.dumps(data).replace("</", "<\\/")
     html = (HTML.read_text(encoding="utf-8")
             .replace(MARKER, f"window.BOARD_DATA = {blob};")
             .replace('<main id="main"></main>', f'<main id="main">{static_html(data)}</main>', 1))
+    if out.is_file() and out.read_text(encoding="utf-8") == html:
+        return out, False
     out.write_text(html, encoding="utf-8")
-    return out
+    return out, True
+
+
+def board_running(host: str, port: int) -> bool:
+    """True if a task board already answers on host:port."""
+    try:
+        c = http.client.HTTPConnection(host, port, timeout=2)
+        c.request("GET", "/")
+        r = c.getresponse()
+        ok = r.status == 200 and b"<title>Tasks</title>" in r.read()
+        c.close()
+        return ok
+    except OSError:
+        return False
 
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("serve")
-    s.add_argument("--host", default="127.0.0.1", help="this machine only by default; the mini passes its Tailscale address")
+    s.add_argument("--host", default="127.0.0.1", help="this computer only (the default)")
     s.add_argument("--port", type=int, default=8765)
     s.add_argument("--vault-name", default=None, help="Obsidian vault name for open links (default: vault.json, else the folder name)")
     e = sub.add_parser("export")
     e.add_argument("--vault-name", default=None)
     args = ap.parse_args(argv)
     if args.cmd == "export":
-        print("wrote:", export_snapshot(vault_name=args.vault_name).relative_to(T.VAULT))
+        out, written = export_snapshot(vault_name=args.vault_name)
+        print("wrote:" if written else "unchanged:", out.relative_to(T.VAULT))
         return 0
-    server = make_server(T.TASKS_DIR, args.host, args.port, args.vault_name)
+    url = f"http://{args.host}:{args.port}/"
+    if board_running(args.host, args.port):          # checked before binding: Windows lets a second server share the port
+        print(f"Task board already running: {url}")
+        return 0
+    try:
+        server = make_server(T.TASKS_DIR, args.host, args.port, args.vault_name)
+    except OSError as e:
+        if e.errno not in (errno.EADDRINUSE, getattr(errno, "WSAEADDRINUSE", None)):
+            raise
+        print(f"Port {args.port} is taken by something else. Start the board on another one: --port {args.port + 1}")
+        return 1
     print(f"Task board: http://{args.host}:{server.server_address[1]}/  (Ctrl-C to stop)")
     try:
         server.serve_forever()

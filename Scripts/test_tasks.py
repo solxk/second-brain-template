@@ -13,11 +13,11 @@ import tasks as T  # noqa: E402
 
 SAMPLE = '''---
 type: task
-title: "Reply to InCorp: both threads"
-project: "[[Wave Skin Wellness]]"
+title: "Reply to the landlord: both letters"
+project: "[[Home]]"
 parent:
 depends-on:
-  - "[[Answer CJAY questions]]"
+  - "[[Find the tenancy agreement]]"
 task-status: todo
 priority: high
 kind: task
@@ -38,10 +38,10 @@ Body text with a [[link]].
 class ParseSerialize(unittest.TestCase):
     def test_roundtrip(self):
         fm, body = T.parse_frontmatter(SAMPLE)
-        self.assertEqual(fm["title"], "Reply to InCorp: both threads")
-        self.assertEqual(fm["project"], "[[Wave Skin Wellness]]")
+        self.assertEqual(fm["title"], "Reply to the landlord: both letters")
+        self.assertEqual(fm["project"], "[[Home]]")
         self.assertIsNone(fm["parent"])
-        self.assertEqual(fm["depends-on"], ["[[Answer CJAY questions]]"])
+        self.assertEqual(fm["depends-on"], ["[[Find the tenancy agreement]]"])
         self.assertEqual(fm["due"], "2026-09-06")
         self.assertEqual(body, "Body text with a [[link]].\n")
         self.assertEqual(T.serialize(fm, body), SAMPLE)
@@ -189,18 +189,18 @@ class Brief(unittest.TestCase):
 class Add(unittest.TestCase):
     def test_add_creates_valid_task_with_safe_filename(self):
         tmp = Path(tempfile.mkdtemp()); today = date(2026, 9, 4)
-        p = T.add_task(tmp, today, "Reply: InCorp / both threads?", project="Wave Skin Wellness",
+        p = T.add_task(tmp, today, "Reply: landlord / both letters?", project="Home",
                        due="2026-09-06", priority="high", after=["Gate"], note="why: deadline")
-        self.assertEqual(p.name, "Reply- InCorp - both threads-.md")
+        self.assertEqual(p.name, "Reply- landlord - both letters-.md")
         tasks, errors = T.load_tasks(tmp)
         self.assertEqual(errors, [])
         t = tasks[p.stem]
-        self.assertEqual(t["title"], "Reply: InCorp / both threads?")
-        self.assertEqual(t["project"], "[[Wave Skin Wellness]]")
+        self.assertEqual(t["title"], "Reply: landlord / both letters?")
+        self.assertEqual(t["project"], "[[Home]]")
         self.assertEqual(t["depends-on"], ["[[Gate]]"])
         self.assertIn("why: deadline", t["_body"])
         with self.assertRaises(T.TaskError):
-            T.add_task(tmp, today, "Reply: InCorp / both threads?", project="X")   # duplicate
+            T.add_task(tmp, today, "Reply: landlord / both letters?", project="X")   # duplicate
 
 
 class ModelV2(unittest.TestCase):
@@ -289,9 +289,9 @@ class ModelV2(unittest.TestCase):
     def test_update_project_and_parent_become_links(self):
         make(self.tmp, "Proj", kind="project")
         make(self.tmp, "Move")
-        T.update_task(self.tmp, "Move", {"project": "Echo", "parent": "Proj"}, self.today)
+        T.update_task(self.tmp, "Move", {"project": "Side business", "parent": "Proj"}, self.today)
         fm, _ = T.parse_frontmatter((self.tmp / "Move.md").read_text())
-        self.assertEqual(fm["project"], "[[Echo]]")
+        self.assertEqual(fm["project"], "[[Side business]]")
         self.assertEqual(fm["parent"], "[[Proj]]")
 
     def test_views_today_rule(self):
@@ -301,7 +301,7 @@ class ModelV2(unittest.TestCase):
         make(self.tmp, "Doing", status="doing")
         make(self.tmp, "High", priority="high")
         make(self.tmp, "High blocked", priority="high", status="blocked")
-        make(self.tmp, "Not mine", priority="high", owner="Rahma")
+        make(self.tmp, "Not mine", priority="high", owner="Sam")
         make(self.tmp, "A project", kind="project", priority="high")
         tasks, _ = T.load_tasks(self.tmp)
         v = T.views(tasks, self.today)
@@ -316,10 +316,10 @@ class ModelV2(unittest.TestCase):
         self.assertEqual([t["title"] for t in T.views(tasks, self.today)["decisions"]], ["Old call", "New call"])
 
     def test_add_task_kind_effort_decision(self):
-        p = T.add_task(self.tmp, self.today, "Big build", project="Echo", kind="project")
+        p = T.add_task(self.tmp, self.today, "Big build", project="Side business", kind="project")
         fm, _ = T.parse_frontmatter(p.read_text())
         self.assertEqual(fm["kind"], "project")
-        p = T.add_task(self.tmp, self.today, "Pick a name", project="Echo", effort="easy", decision=True)
+        p = T.add_task(self.tmp, self.today, "Pick a name", project="Side business", effort="easy", decision=True)
         fm, _ = T.parse_frontmatter(p.read_text())
         self.assertEqual((fm["kind"], fm["effort"], fm["decision"]), ("task", "easy", "true"))
         with self.assertRaises(T.TaskError):
@@ -356,6 +356,146 @@ class ReviewFixes(unittest.TestCase):
         r = T.sync(self.tmp, self.today, archive=False)
         self.assertEqual(r["archived"], [])
         self.assertTrue((self.tmp / "Dropped.md").exists())
+
+
+class LinkNames(unittest.TestCase):
+    """A title like "Decide: X" is saved as "Decide- X.md"; links to it must use the saved name."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.today = date(2026, 10, 7)
+
+    def test_parent_and_dependency_links_use_the_saved_filename(self):
+        T.add_task(self.tmp, self.today, "Sell the flat: this year?", project="Home", kind="project")
+        T.add_task(self.tmp, self.today, "Decide: agent or online?", project="Home")
+        p = T.add_task(self.tmp, self.today, "Book the valuation", project="Home",
+                       parent="Sell the flat: this year?", after=["Decide: agent or online?"])
+        fm, _ = T.parse_frontmatter(p.read_text())
+        self.assertEqual(fm["parent"], "[[Sell the flat- this year-]]")
+        self.assertEqual(fm["depends-on"], ["[[Decide- agent or online-]]"])
+
+    def test_dependency_on_a_colon_title_blocks_instead_of_erroring(self):
+        T.add_task(self.tmp, self.today, "Decide: agent or online?", project="Home")
+        T.add_task(self.tmp, self.today, "List the flat", project="Home", after=["Decide: agent or online?"])
+        r = T.sync(self.tmp, self.today)
+        self.assertEqual(r["errors"], [])
+        tasks, _ = T.load_tasks(self.tmp)
+        self.assertEqual(tasks["List the flat"][T.STATUS], "blocked")
+
+    def test_board_parent_change_uses_the_saved_filename(self):
+        T.add_task(self.tmp, self.today, "Get fit: wedding", project="Health", kind="project")
+        make(self.tmp, "Run twice a week")
+        T.update_task(self.tmp, "Run twice a week", {"parent": "Get fit: wedding"}, self.today)
+        fm, _ = T.parse_frontmatter((self.tmp / "Run twice a week.md").read_text())
+        self.assertEqual(fm["parent"], "[[Get fit- wedding]]")
+        self.assertEqual(T.hierarchy_review(T.load_tasks(self.tmp)[0]), [])
+
+
+class ArchivedDependencies(unittest.TestCase):
+    """Sync archives a done task after ARCHIVE_DAYS; anything still waiting on it must not break."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.today = date(2026, 10, 7)
+        (self.tmp / "Archive").mkdir()
+
+    def test_done_dependency_in_archive_counts_as_done(self):
+        make(self.tmp / "Archive", "Gate", status="done", done="2026-08-01")
+        make(self.tmp, "Next", status="blocked", **{"depends-on": ["[[Gate]]"]})
+        r = T.sync(self.tmp, self.today)
+        self.assertEqual(r["errors"], [])
+        tasks, _ = T.load_tasks(self.tmp)
+        self.assertEqual(tasks["Next"][T.STATUS], "todo")
+
+    def test_dropped_dependency_in_archive_stays_blocked_and_is_flagged(self):
+        make(self.tmp / "Archive", "Dead", status="dropped")
+        make(self.tmp, "Leaner", status="blocked", **{"depends-on": ["[[Dead]]"]})
+        r = T.sync(self.tmp, self.today)
+        self.assertEqual(r["errors"], [])
+        tasks, _ = T.load_tasks(self.tmp)
+        self.assertEqual(tasks["Leaner"][T.STATUS], "blocked")
+        self.assertTrue(any(l.startswith("Leaner: depends on dropped") for l in r["review"]))
+
+    def test_brief_counts_archived_done_dependency_as_unblocked(self):
+        make(self.tmp / "Archive", "Gate", status="done", done="2026-08-01")
+        make(self.tmp, "Freed", status="blocked", **{"depends-on": ["[[Gate]]"]})
+        b = T.brief(self.tmp, self.today)
+        self.assertEqual([t["title"] for t in b["unblocked"]], ["Freed"])
+
+
+class Reminders(unittest.TestCase):
+    """kind: reminder — a nudge on a date. Lives in its own list, never in Today's work."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.today = date(2026, 10, 7)
+
+    def test_add_reminder_needs_a_date_and_no_project(self):
+        with self.assertRaises(T.TaskError):
+            T.add_task(self.tmp, self.today, "Call mum", kind="reminder")
+        p = T.add_task(self.tmp, self.today, "Call mum", kind="reminder", due="2026-10-09")
+        fm, _ = T.parse_frontmatter(p.read_text())
+        self.assertEqual((fm["kind"], fm["project"], fm["due"]), ("reminder", None, "2026-10-09"))
+
+    def test_reminders_never_in_today_and_have_their_own_view(self):
+        make(self.tmp, "Call mum", kind="reminder", project=None, due="2026-10-06")
+        make(self.tmp, "Buy sandpaper", kind="reminder", project=None, due="2026-11-01")
+        make(self.tmp, "Old reminder", kind="reminder", project=None, due="2026-10-01", status="done", done="2026-10-01")
+        make(self.tmp, "Real work", due="2026-10-08")
+        v = T.views(T.load_tasks(self.tmp)[0], self.today)
+        self.assertEqual([t["title"] for t in v["today"]], ["Real work"])
+        self.assertEqual([t["title"] for t in v["reminders"]], ["Call mum", "Buy sandpaper"])
+
+    def test_brief_lists_reminders_due_by_today_on_their_own(self):
+        make(self.tmp, "Late nudge", kind="reminder", project=None, due="2026-10-05")
+        make(self.tmp, "Today nudge", kind="reminder", project=None, due="2026-10-07")
+        make(self.tmp, "Next week nudge", kind="reminder", project=None, due="2026-10-12")
+        make(self.tmp, "Late task", due="2026-10-01")
+        b = T.brief(self.tmp, self.today)
+        self.assertEqual([t["title"] for t in b["reminders"]], ["Late nudge", "Today nudge"])
+        self.assertEqual([t["title"] for t in b["overdue"]], ["Late task"])
+        self.assertEqual(b["soon"], [])
+        self.assertIn("Reminders for today (2)", T.format_brief(b, self.today))
+
+    def test_reminders_are_never_stale(self):
+        make(self.tmp, "Far nudge", kind="reminder", project=None, due="2026-12-01", updated="2026-08-01")
+        self.assertEqual(T.brief(self.tmp, self.today)["stale"], [])
+
+
+class BriefWording(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.today = date(2026, 10, 7)
+
+    def test_goals_are_not_listed_as_high_priority_work(self):
+        make(self.tmp, "Sell the flat", kind="project", priority="high")
+        make(self.tmp, "Get a valuation", priority="high", parent="[[Sell the flat]]")
+        b = T.brief(self.tmp, self.today)
+        self.assertEqual([t["title"] for t in b["high"]], ["Get a valuation"])
+
+    def test_reminder_lines_skip_folder_owner_and_priority(self):
+        make(self.tmp, "Call mum", kind="reminder", project=None, due="2026-10-07")
+        text = T.format_brief(T.brief(self.tmp, self.today), self.today)
+        self.assertIn("  - Call mum  2026-10-07\n", text)
+
+    def test_unsorted_section_matches_the_board(self):
+        make(self.tmp, "Half a thought", status="inbox", project=None)
+        self.assertIn("To sort (1)", T.format_brief(T.brief(self.tmp, self.today), self.today))
+
+
+class StaleCap(unittest.TestCase):
+    def test_brief_text_shows_five_stale_high_priority_first(self):
+        tmp = Path(tempfile.mkdtemp()); today = date(2026, 10, 7)
+        for i in range(6):
+            make(tmp, f"Stale {i}", updated="2026-08-01")
+        make(tmp, "Stale but important", updated="2026-09-01", priority="high")
+        b = T.brief(tmp, today)
+        self.assertEqual(len(b["stale"]), 7)
+        text = T.format_brief(b, today).split("Stale — no change in 14+ days (7)")[1]
+        lines = [l for l in text.splitlines() if l.startswith("  - ")]
+        self.assertEqual(len(lines), 5)
+        self.assertIn("Stale but important", lines[0])
+        self.assertIn("and 2 more", text)
 
 
 if __name__ == "__main__":

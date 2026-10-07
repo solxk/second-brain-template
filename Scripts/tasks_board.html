@@ -33,7 +33,7 @@
   #panel.open { display:block; }
   #panel h2 { font-size:17px; margin:0 0 8px; padding-right:40px; }
   #panel .close { position:absolute; top:10px; right:12px; width:40px; height:40px; border:0; background:transparent; font-size:22px; color:var(--muted); }
-  .field { display:grid; grid-template-columns:90px 1fr; gap:8px; align-items:center; margin:6px 0; font-size:14px; }
+  .field { display:grid; grid-template-columns:120px 1fr; gap:8px; align-items:center; margin:6px 0; font-size:14px; }
   .field select, .field input { min-height:40px; border:1px solid var(--line); border-radius:6px; padding:0 8px; font:inherit; background:var(--bg); color:var(--fg); width:100%; }
   .body { margin-top:12px; padding-top:12px; border-top:1px solid var(--line); font-size:14px; white-space:pre-wrap; }
   .body a { color:var(--accent); }
@@ -46,7 +46,7 @@
 <body>
 <header>
   <h1><span>Tasks</span><small id="stamp"></small></h1>
-  <textarea id="dump" placeholder="Brain dump: one task per line, Enter to add (Shift-Enter for a new line)"></textarea>
+  <textarea id="dump" placeholder="Brain dump: one thing per line, Enter to add (Shift-Enter for a new line). Claude sorts them."></textarea>
   <nav id="tabs"></nav>
 </header>
 <div class="filters" id="filters"></div>
@@ -56,8 +56,8 @@
 <script>
 /*BOARD_DATA*/
 const LIVE = !window.BOARD_DATA;
-const VIEWS = [["today","Today"],["board","Board"],["decisions","Decisions"],["waiting","Waiting on others"],["inbox","Inbox"],["someday","Someday"],["done","Done"]];
-const S = { data:null, view:"today", filters:{venture:"",effort:"",owner:"",priority:""}, open:null, collapsed:new Set() };
+const VIEWS = [["today","Today"],["reminders","Reminders"],["board","Board"],["decisions","Decisions"],["waiting","Waiting on others"],["inbox","To sort"],["someday","Someday"],["done","Done"]];
+const S = { data:null, view:"today", filters:{folder:"",effort:"",owner:"",priority:""}, open:null, collapsed:new Set() };
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const obs = file => `obsidian://open?vault=${encodeURIComponent(S.data.vault)}&file=${encodeURIComponent(file)}`;
@@ -68,14 +68,14 @@ function toast(msg) { const t = $("#toast"); t.textContent = msg; t.style.displa
 async function load() {
   if (!LIVE) { S.data = window.BOARD_DATA; render(); return; }
   try { S.data = await (await fetch("/api/tasks", {cache:"no-store"})).json(); render(); }
-  catch (e) { $("#main").innerHTML = `<p class="empty">Can't reach the board server. Start it with: python3 Scripts/tasks_board.py serve</p>`; }
+  catch (e) { $("#main").innerHTML = `<p class="empty">Can't reach the board. Ask Claude to open the board.</p>`; }
 }
 
 function byName() { const m = {}; for (const t of S.data.tasks) m[t.name] = t; return m; }
 
 function passes(t) {
   const f = S.filters;
-  return (!f.venture || t.project_name === f.venture) && (!f.effort || (f.effort === "unsized" ? !t.effort : t.effort === f.effort))
+  return (!f.folder || t.project_name === f.folder) && (!f.effort || (f.effort === "unsized" ? !t.effort : t.effort === f.effort))
       && (!f.owner || t.owner === f.owner) && (!f.priority || t.priority === f.priority);
 }
 
@@ -95,20 +95,23 @@ function row(t, sub) {
   const done = t[STATUS_KEY] === "done";
   return `<div class="task ${sub ? "sub" : ""}" data-name="${esc(t.name)}">
     <input type="checkbox" ${done ? "checked" : ""} ${LIVE ? "" : "disabled"} aria-label="Done">
-    <div class="t"><div>${esc(t.title)}</div><div class="meta">${S.view === "board" ? "" : esc(t.project_name) + " · "}${chips(t)}</div></div></div>`;
+    <div class="t"><div>${esc(t.title)}</div><div class="meta">${S.view === "board" || !t.project_name ? "" : esc(t.project_name) + " · "}${chips(t)}</div></div></div>`;
 }
 
 function render() {
   const d = S.data, all = byName();
   $("#stamp").textContent = (LIVE ? "" : "snapshot · ") + d.today;
-  $("#tabs").innerHTML = VIEWS.map(([k, label]) => `<button data-v="${k}" class="${S.view === k ? "on" : ""}">${label}${k === "today" ? ` (${d.views.today.filter(n => passes(all[n])).length})` : ""}</button>`).join("");
+  const dueNow = d.views.reminders.filter(n => all[n] && all[n].due && all[n].due <= d.today).length;   // reminders stay out of Today, so the tab carries the count
+  const count = k => k === "today" ? ` (${d.views.today.filter(n => passes(all[n])).length})` : k === "reminders" && dueNow ? ` (${dueNow})` : "";
+  $("#tabs").innerHTML = VIEWS.map(([k, label]) => `<button data-v="${k}" class="${S.view === k ? "on" : ""}">${label}${count(k)}</button>`).join("");
   const owners = [...new Set(d.tasks.map(t => t.owner))].sort();
   const sel = (key, opts, label) => `<select data-f="${key}"><option value="">${label}</option>${opts.map(o => `<option ${S.filters[key] === o ? "selected" : ""} value="${esc(o)}">${esc(o)}</option>`).join("")}</select>`;
-  $("#filters").innerHTML = sel("venture", d.ventures, "All ventures") + sel("effort", ["deep", "medium", "easy", "unsized"], "Any effort") + sel("owner", owners, "Anyone") + sel("priority", ["high", "normal", "low"], "Any priority");
+  $("#filters").innerHTML = sel("folder", d.folders, "All projects and areas") + sel("effort", ["deep", "medium", "easy", "unsized"], "Any effort")
+    + (owners.length > 1 ? sel("owner", owners, "Anyone") : "") + sel("priority", ["high", "normal", "low"], "Any priority");
   let html = "";
   if (S.view === "board") {
-    // Grouping comes from the server (tree); filters apply to tasks only, so a project is shown whenever
-    // it passes or any of its children pass, and a child can never be hidden by its parent.
+    // Grouping comes from the server (tree); filters apply to tasks only, so a goal is shown whenever
+    // it passes or any of its children pass, and a child can never be hidden by its goal.
     for (const [v, node] of Object.entries(d.tree)) {
       let section = "";
       for (const pr of node.projects) {
@@ -136,21 +139,26 @@ function bodyHtml(body) {
 
 function openPanel(name) {
   const t = byName()[name]; if (!t) return; S.open = name;
-  const opt = (opts, cur) => opts.map(o => `<option ${o === (cur || "") ? "selected" : ""} value="${esc(o)}">${esc(o) || "—"}</option>`).join("");
+  const opt = (opts, cur, names) => opts.map(o => `<option ${o === (cur || "") ? "selected" : ""} value="${esc(o)}">${esc(names ? names[o] : o) || "—"}</option>`).join("");
   const dis = LIVE ? "" : "disabled";
+  const L = S.data.labels;
+  const goals = S.data.projects.filter(p => p !== t.name);
+  const titles = Object.fromEntries(S.data.tasks.map(x => [x.name, x.title]));      // goals are saved by filename; show their titles
+  const showGoal = t.kind !== "project" && (goals.length || t.parent_name);         // nothing to pick until a goal exists
+  const showOwner = t.owner !== S.data.me || new Set(S.data.tasks.map(x => x.owner)).size > 1;
   $("#panelBody").innerHTML = `<h2>${esc(t.title)}</h2>
     ${LIVE ? "" : `<p class="ro">Snapshot: open the live board to edit.</p>`}
     <div class="field"><label>Status</label><select data-k="${STATUS_KEY}" ${dis}>${opt(t[STATUS_KEY] === "blocked" ? ["blocked","inbox","todo","doing","someday","done","dropped"] : ["inbox","todo","doing","someday","done","dropped"], t[STATUS_KEY])}</select></div>
     <div class="field"><label>Priority</label><select data-k="priority" ${dis}>${opt(["high","normal","low"], t.priority)}</select></div>
     <div class="field"><label>Effort</label><select data-k="effort" ${dis}>${opt(["","deep","medium","easy"], t.effort)}</select></div>
-    <div class="field"><label>Kind</label><select data-k="kind" ${dis}>${opt(["task","project"], t.kind)}</select></div>
+    <div class="field"><label>Kind</label><select data-k="kind" ${dis}>${opt(["task","project","reminder"], t.kind, L)}</select></div>
     <div class="field"><label>Decision</label><select data-k="decision" ${dis}>${opt(["false","true"], String(!!t.decision))}</select></div>
     <div class="field"><label>Due</label><input type="date" data-k="due" data-blur="1" value="${esc(t.due || "")}" ${dis}></div>
-    <div class="field"><label>Venture</label><select data-k="project" ${dis}>${opt(["", ...S.data.ventures], t.project_name)}</select></div>
-    <div class="field"><label>Parent</label><select data-k="parent" ${dis}>${opt(["", ...S.data.projects.filter(p => p !== t.name)], t.parent_name)}</select></div>
-    <div class="field"><label>Owner</label><input data-k="owner" value="${esc(t.owner)}" ${dis}></div>
+    <div class="field"><label>Project or area</label><select data-k="project" ${dis}>${opt(["", ...S.data.folders], t.project_name)}</select></div>
+    ${showGoal ? `<div class="field"><label>${esc(L.project)}</label><select data-k="parent" ${dis}>${opt(["", ...goals], t.parent_name, titles)}</select></div>` : ""}
+    ${showOwner ? `<div class="field"><label>Owner</label><input data-k="owner" value="${esc(t.owner)}" ${dis}></div>` : ""}
     <div class="body">${bodyHtml(t.body)}</div>
-    <div class="actions"><a href="${obs("Tasks/" + t.name)}">Open in Obsidian</a>${t.parent_name ? `<button data-go="${esc(t.parent_name)}">Parent: ${esc(t.parent_name)}</button>` : ""}</div>`;
+    <div class="actions"><a href="${obs("Tasks/" + t.name)}">Open in Obsidian</a>${t.parent_name ? `<button data-go="${esc(t.parent_name)}">${esc(L.project)}: ${esc(titles[t.parent_name] || t.parent_name)}</button>` : ""}</div>`;
   $("#panel").classList.add("open");
 }
 
@@ -198,7 +206,7 @@ $("#dump").addEventListener("keydown", async e => {
     const r = await fetch("/api/add", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({lines})});
     const j = await r.json();
     $("#dump").value = j.errors.length ? j.errors.map(x => x.split(": ").slice(0, -1).join(": ") || x).join("\n") : "";
-    toast(`${j.created.length} added to Inbox${j.errors.length ? `, ${j.errors.length} not added (${j.errors[0]})` : ""}`);
+    toast(`${j.created.length} added to To sort${j.errors.length ? `, ${j.errors.length} not added (${j.errors[0]})` : ""}`);
     await load();
   } catch (e) { toast("Not added: can't reach the board server"); }
   finally { dumping = false; }

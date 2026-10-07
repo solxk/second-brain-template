@@ -8,7 +8,7 @@ properties:
   file.name:
     displayName: Task
   note.project:
-    displayName: Project
+    displayName: Project or area
   note.task-status:
     displayName: Status
   note.priority:
@@ -26,7 +26,7 @@ properties:
   note.depends-on:
     displayName: Depends on
   note.parent:
-    displayName: Parent
+    displayName: Goal
   note.done:
     displayName: Done
   note.updated:
@@ -40,17 +40,17 @@ views:
         - note["task-status"] != "dropped"
         - note["task-status"] != "someday"
         - note["task-status"] != "inbox"
+        - note.kind != "reminder"
     groupBy:
       property: project
       direction: ASC
     order:
       - file.name
       - task-status
-      - kind
+      - parent
       - priority
       - effort
       - due
-      - owner
       - depends-on
     sort:
       - property: formula.rank
@@ -66,6 +66,7 @@ views:
         - note["task-status"] != "done"
         - note["task-status"] != "dropped"
         - note["task-status"] != "someday"
+        - note.kind != "reminder"
         - not:
             - due.isEmpty()
     order:
@@ -74,67 +75,22 @@ views:
       - project
       - task-status
       - priority
-      - owner
     sort:
       - property: due
         direction: ASC
   - type: table
-    name: Inbox
+    name: Reminders
     filters:
       and:
-        - note["task-status"] == "inbox"
+        - note.kind == "reminder"
+        - note["task-status"] != "done"
+        - note["task-status"] != "dropped"
     order:
       - file.name
-      - project
-      - priority
       - due
-      - created
+      - task-status
     sort:
-      - property: created
-        direction: ASC
-  - type: table
-    name: Blocked
-    filters:
-      and:
-        - note["task-status"] == "blocked"
-    order:
-      - file.name
-      - project
-      - depends-on
-      - priority
-      - due
-    sort:
-      - property: project
-        direction: ASC
-  - type: table
-    name: Unscheduled
-    filters:
-      and:
-        - note["task-status"] == "todo"
-        - due.isEmpty()
-    groupBy:
-      property: project
-      direction: ASC
-    order:
-      - file.name
-      - priority
-      - owner
-      - updated
-    sort:
-      - property: formula.rank
-        direction: ASC
-  - type: table
-    name: Someday
-    filters:
-      and:
-        - note["task-status"] == "someday"
-    order:
-      - file.name
-      - project
-      - priority
-      - updated
-    sort:
-      - property: project
+      - property: due
         direction: ASC
   - type: table
     name: Done
@@ -145,7 +101,6 @@ views:
       - file.name
       - done
       - project
-      - owner
     sort:
       - property: done
         direction: DESC
@@ -160,9 +115,9 @@ views:
     order:
       - file.name
       - task-status
+      - parent
       - priority
       - due
-      - owner
       - depends-on
     sort:
       - property: formula.rank

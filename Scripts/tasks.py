@@ -8,7 +8,7 @@ Commands (run from anywhere):
   python3 Scripts/tasks.py sync           # derive blocked, done dates, archive done + dropped
   python3 Scripts/tasks.py add "Title" --project "Acme" [--due 2026-09-24]
         [--priority high|normal|low] [--owner Name] [--parent "Title"] [--after "Title" ...] [--inbox] [--note "text"]
-        [--kind project] [--effort deep|medium|easy] [--decision]
+        [--kind project|reminder] [--effort deep|medium|easy] [--decision]
   python3 Scripts/tasks.py list [--project X] [--status Y]
 
 The status field is `task-status` (not `status`, so Obsidian's value suggestions show only task
@@ -48,12 +48,14 @@ LIST_FIELDS = {"depends-on"}
 DATE_FIELDS = {"due", "created", "updated", "done"}
 STATUSES = {"inbox", "todo", "blocked", "doing", "done", "someday", "dropped"}
 PRIORITIES = {"high", "normal", "low"}
-KINDS = {"project", "task"}                  # project = has a finish line and tasks under it; task = one session or one decision
+KINDS = {"project", "task", "reminder"}      # project = a goal: a finish line with tasks under it; task = one session or
+                                             # one decision; reminder = a nudge on a date, kept out of the work lists
 EFFORTS = {"deep", "medium", "easy"}         # deep = a focused block; medium = an ordinary session; easy = minutes
 EDITABLE = {"project", "parent", STATUS, "priority", "kind", "effort", "decision", "due", "owner"}
 OPEN = {"todo", "blocked", "doing"}          # statuses that count as live work
 CLOSED = {"done", "dropped"}                 # satisfy nothing further; dropped archives on the next sync
 STALE_DAYS, SOON_DAYS, ARCHIVE_DAYS = 14, 7, 30
+STALE_SHOWN = 5                              # the brief lists this many stale tasks and counts the rest
 
 WIKI = re.compile(r"\[\[([^\]|#]+)(?:[#|][^\]]*)?\]\]")
 NEEDS_QUOTE = re.compile(r'[\[\]:#"\'{}]|^[-?&*!|>%@`]|^\s|\s$')
@@ -160,12 +162,18 @@ def link_name(link) -> str:
     return m.group(1).strip() if m else str(link).strip()
 
 
+def link_to(name) -> str:
+    """The wiki link to a task or folder note, by the name it is saved under ("Decide: X" -> [[Decide- X]])."""
+    return f"[[{safe_filename(link_name(name))}]]"
+
+
 def is_decision(t: dict) -> bool:
     return str(t.get("decision")).lower() == "true"
 
 
 def hierarchy_review(tasks: dict) -> list[str]:
-    """Venture > project > task, no deeper. Parents that aren't live (archived) are left alone."""
+    """Folder > goal (kind: project) > task, no deeper. Only a goal can be a parent. Parents that aren't
+    live (archived) are left alone."""
     out = []
     for name, t in tasks.items():
         if not t.get("parent"):
@@ -175,9 +183,9 @@ def hierarchy_review(tasks: dict) -> list[str]:
         if parent is None:
             continue
         if t.get("kind") == "project":
-            out.append(f"{name}: a project cannot sit under [[{pname}]]")
+            out.append(f"{name}: a goal (kind: project) cannot sit under [[{pname}]]")
         elif parent.get("kind") != "project":
-            out.append(f"{name}: parent [[{pname}]] is not kind: project")
+            out.append(f"{name}: parent [[{pname}]] is not a goal (kind: project)")
     return out
 
 
@@ -226,15 +234,29 @@ def _write(t: dict) -> None:
     t["_path"].write_text(serialize(clean, t["_body"]), encoding="utf-8")
 
 
-def deps_state(task: dict, tasks: dict) -> tuple[bool, list[str]]:
-    """(all dependencies done?, [missing dependency names])."""
+def archived_statuses(folder: Path = TASKS_DIR) -> dict[str, str]:
+    """{name: status} for the notes in Tasks/Archive/. Unreadable ones are left out."""
+    out = {}
+    for p in sorted((folder / "Archive").glob("*.md")):
+        try:
+            fm, _ = parse_frontmatter(p.read_text(encoding="utf-8"))
+        except TaskError:
+            continue
+        out[p.stem] = fm.get(STATUS)
+    return out
+
+
+def deps_state(task: dict, tasks: dict, archived: dict | None = None) -> tuple[bool, list[str]]:
+    """(all dependencies done?, [missing dependency names]). A dependency that sync has archived counts
+    by its archived status: done unblocks, dropped does not."""
     missing, all_done = [], True
     for d in task.get("depends-on") or []:
         name = link_name(d)
         dep = tasks.get(name)
-        if dep is None:
+        status = dep[STATUS] if dep is not None else (archived or {}).get(name)
+        if status is None:
             missing.append(name)
-        elif dep[STATUS] != "done":           # a dropped dependency does not unblock; sync flags it
+        elif status != "done":                # a dropped dependency does not unblock; sync flags it
             all_done = False
     return all_done, missing
 
@@ -257,7 +279,7 @@ def update_task(folder: Path, name: str, changes: dict, today: date, source: str
     log = []
     for k, v in changes.items():
         if k in {"project", "parent"}:
-            v = f"[[{link_name(v)}]]" if v else None
+            v = link_to(v) if v else None
         elif k == "decision":
             v = "true" if str(v).lower() == "true" else None
         elif v in ("", None):
@@ -285,7 +307,7 @@ def update_task(folder: Path, name: str, changes: dict, today: date, source: str
 
 def views(tasks: dict, today: date, me: str = OWNER) -> dict:
     """The board's views. Today is by rule: my open tasks that are overdue, due within SOON_DAYS,
-    in progress, or high priority and not blocked. Projects never appear in Today."""
+    in progress, or high priority and not blocked. Goals (kind: project) and reminders never appear in Today."""
     live = [t for t in tasks.values() if t[STATUS] in OPEN]
 
     def due(t):
@@ -296,11 +318,12 @@ def views(tasks: dict, today: date, me: str = OWNER) -> dict:
         bucket = 0 if d and d < today else 1 if d else 2 if t[STATUS] == "doing" else 3
         return (bucket, t.get("due") or "9999", t["title"])
 
-    mine = [t for t in live if t.get("owner") == me and t.get("kind") != "project"]
+    mine = [t for t in live if t.get("owner") == me and t.get("kind") not in ("project", "reminder")]
     today_rows = [t for t in mine if (due(t) and due(t) <= today + timedelta(days=SOON_DAYS))
                   or t[STATUS] == "doing" or (t["priority"] == "high" and t[STATUS] != "blocked")]
     return {
         "today": sorted(today_rows, key=today_rank),
+        "reminders": sorted((t for t in live if t.get("kind") == "reminder"), key=lambda t: (t.get("due") or "9999", t["title"])),
         "decisions": sorted((t for t in live if is_decision(t)), key=lambda t: (t.get("created") or "", t["title"])),
         "waiting": [t for t in live if t.get("owner") != me] + [t for t in live if t.get("owner") == me and t[STATUS] == "blocked"],
         "inbox": sorted((t for t in tasks.values() if t[STATUS] == "inbox"), key=lambda t: (t.get("created") or "", t["title"])),
@@ -330,13 +353,14 @@ def sync(folder: Path = TASKS_DIR, today: date | None = None, archive: bool = Tr
     for name in in_both(folder):
         report["review"].append(f"{name}: also in Archive/ (reused name) - compare, keep one")
     report["review"] += hierarchy_review(tasks)
-    dropped = {n for n, t in tasks.items() if t[STATUS] == "dropped"}
+    archived = archived_statuses(folder)
+    dropped = {n for n, t in tasks.items() if t[STATUS] == "dropped"} | {n for n, s in archived.items() if s == "dropped"}
     for name, t in tasks.items():
         changed = False
         if t.get("done") and t[STATUS] not in CLOSED:
             t[STATUS] = "done"                    # dated done in Obsidian (Bases only offers the date field)
             changed = True
-        all_done, missing = deps_state(t, tasks)
+        all_done, missing = deps_state(t, tasks, archived)
         if t[STATUS] in OPEN:                     # closed tasks may point at archived deps; that's fine
             for m in missing:
                 report["errors"].append(f"{name}: depends-on [[{m}]] does not exist")
@@ -381,17 +405,22 @@ def sync(folder: Path = TASKS_DIR, today: date | None = None, archive: bool = Tr
 def brief(folder: Path = TASKS_DIR, today: date | None = None) -> dict:
     today = today or date.today()
     tasks, errors = load_tasks(folder)
-    live = [t for t in tasks.values() if t[STATUS] in OPEN]
+    archived = archived_statuses(folder)
+    nudges = [t for t in tasks.values() if t[STATUS] in OPEN and t.get("kind") == "reminder"]
+    live = [t for t in tasks.values() if t[STATUS] in OPEN and t.get("kind") != "reminder"]
     dated = [t for t in live if t.get("due")]
     return {
         "overdue": sorted((t for t in dated if _parse_date(t["due"], "due") < today), key=lambda t: t["due"]),
         "soon": sorted((t for t in dated if today <= _parse_date(t["due"], "due") <= today + timedelta(days=SOON_DAYS)),
                        key=lambda t: t["due"]),
-        "high": [t for t in live if t["priority"] == "high" and t[STATUS] != "blocked" and not t.get("due")],
+        "high": [t for t in live if t["priority"] == "high" and t[STATUS] != "blocked" and not t.get("due")
+                 and t.get("kind") != "project"],
+        "reminders": sorted((t for t in nudges if t.get("due") and _parse_date(t["due"], "due") <= today),
+                            key=lambda t: (t["due"], t["title"])),
         "inbox": [t for t in tasks.values() if t[STATUS] == "inbox"],
         "decisions": sorted((t for t in live if is_decision(t)), key=lambda t: (t.get("created") or "", t["title"])),
         "stale": [t for t in live if t.get("updated") and (today - _parse_date(t["updated"], "updated")).days >= STALE_DAYS],
-        "unblocked": [t for t in live if t[STATUS] == "blocked" and deps_state(t, tasks) == (True, [])],
+        "unblocked": [t for t in live if t[STATUS] == "blocked" and deps_state(t, tasks, archived) == (True, [])],
         "blocked": [t for t in live if t[STATUS] == "blocked"],
         "errors": [f"{p.name}: {e}" for p, e in errors],
         "in_both": in_both(folder) if folder.is_dir() else [],
@@ -400,6 +429,8 @@ def brief(folder: Path = TASKS_DIR, today: date | None = None) -> dict:
 
 
 def _line(t: dict) -> str:
+    if t.get("kind") == "reminder":
+        return f"  - {t['title']}  {t.get('due') or ''}".rstrip()
     proj = link_name(t["project"]) if t.get("project") else "—"
     due = f"  due {t['due']}" if t.get("due") else ""
     return f"  - [{t['priority']}] {t['title']}  ({proj}, {t['owner']}){due}"
@@ -408,15 +439,21 @@ def _line(t: dict) -> str:
 def format_brief(b: dict, today: date) -> str:
     parts = [f"Task brief — {today.isoformat()}",
              "counts: " + (", ".join(f"{k} {v}" for k, v in b["counts"].items() if v) or "no tasks")]
-    sections = [("OVERDUE", "overdue"), (f"Due in {SOON_DAYS} days", "soon"),
+    sections = [("OVERDUE", "overdue"), ("Reminders for today", "reminders"), (f"Due in {SOON_DAYS} days", "soon"),
                 ("High priority, undated, unblocked", "high"), ("Decisions waiting", "decisions"),
-                ("Inbox — file these", "inbox"),
+                ("To sort", "inbox"),
                 ("Newly unblocked — sync will flip to todo", "unblocked"),
                 (f"Stale — no change in {STALE_DAYS}+ days", "stale"), ("Blocked", "blocked")]
+    rank = {"high": 0, "normal": 1, "low": 2}
     for label, key in sections:
         if b[key]:
             parts.append(f"\n{label} ({len(b[key])})")
-            parts += [_line(t) for t in b[key]]
+            rows = b[key]
+            if key == "stale":                      # a long nag list gets ignored: the five that matter most
+                rows = sorted(rows, key=lambda t: (rank[t["priority"]], t.get("updated") or ""))[:STALE_SHOWN]
+            parts += [_line(t) for t in rows]
+            if len(rows) < len(b[key]):
+                parts.append(f"  … and {len(b[key]) - len(rows)} more")
     if b["in_both"]:
         parts.append(f"\nALSO IN ARCHIVE — a live note and an archived one share a name; compare and keep one ({len(b['in_both'])})")
         parts += [f"  - {n}" for n in b["in_both"]]
@@ -445,6 +482,8 @@ def add_task(folder: Path, today: date, title: str, project: str | None = None, 
         raise TaskError(f"bad effort {effort!r}")
     if status and status not in STATUSES:
         raise TaskError(f"bad status {status!r}")
+    if kind == "reminder" and not due:
+        raise TaskError("a reminder needs a date (--due)")
     if due:
         _parse_date(due, "due")
     path = folder / f"{safe_filename(title)}.md"
@@ -452,9 +491,9 @@ def add_task(folder: Path, today: date, title: str, project: str | None = None, 
         raise TaskError(f"task already exists: {path.name}")
     fm = {
         "type": "task", "title": title,
-        "project": f"[[{link_name(project)}]]" if project else None,
-        "parent": f"[[{link_name(parent)}]]" if parent else None,
-        "depends-on": [f"[[{link_name(a)}]]" for a in (after or [])],
+        "project": link_to(project) if project else None,
+        "parent": link_to(parent) if parent else None,
+        "depends-on": [link_to(a) for a in (after or [])],
         STATUS: status or ("inbox" if inbox else "todo"),
         "priority": priority,
         "kind": kind, "effort": effort, "decision": "true" if decision else None,
@@ -498,7 +537,8 @@ def main(argv: list[str] | None = None) -> int:
     a.add_argument("--inbox", action="store_true", help="unfiled brain dump")
     a.add_argument("--status", choices=sorted(STATUSES), help="override the initial status (e.g. someday)")
     a.add_argument("--note", default="", help="body text")
-    a.add_argument("--kind", default="task", choices=sorted(KINDS), help="project = has tasks under it")
+    a.add_argument("--kind", default="task", choices=sorted(KINDS),
+                   help="project = a goal with tasks under it; reminder = a nudge on a date (needs --due)")
     a.add_argument("--effort", choices=sorted(EFFORTS), help="deep | medium | easy")
     a.add_argument("--decision", action="store_true", help="a yes/no call that is yours to make")
     l = sub.add_parser("list")
@@ -525,7 +565,8 @@ def main(argv: list[str] | None = None) -> int:
         try:
             sys.path.insert(0, str(Path(__file__).resolve().parent))
             import tasks_board
-            print("snapshot:", tasks_board.export_snapshot(TASKS_DIR, today).relative_to(VAULT))
+            out, written = tasks_board.export_snapshot(TASKS_DIR, today)
+            print("snapshot:", out.relative_to(VAULT) if written else f"{out.relative_to(VAULT)} (unchanged)")
         except Exception as e:                      # the snapshot is a convenience; sync must still succeed
             print("snapshot: not written:", e)
         return 1 if r["errors"] else 0

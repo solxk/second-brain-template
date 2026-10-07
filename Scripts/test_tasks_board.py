@@ -1,8 +1,12 @@
 """Tests for tasks_board.py. Run from the vault root:
     python3 -m unittest Scripts/test_tasks_board.py -v
 """
+import contextlib
 import http.client
+import io
 import json
+import os
+import socket
 import sys
 import tempfile
 import threading
@@ -32,7 +36,7 @@ class Payload(unittest.TestCase):
         self.assertIsInstance(t["version"], str)          # mtime_ns exceeds JS safe-integer range; a number would be rounded
         self.assertEqual(p["views"]["today"], ["Do it"])
         self.assertEqual(p["views"]["decisions"], ["Do it"])
-        self.assertEqual(p["ventures"], ["P"])
+        self.assertEqual(p["folders"], ["P"])
         self.assertEqual(p["projects"], ["Proj"])
         self.assertEqual(p["errors"], [])
 
@@ -115,7 +119,7 @@ class Snapshot(unittest.TestCase):
         make(self.tmp, "Pick a colour", decision="true")
 
     def test_snapshot_has_data_and_no_fetch_on_load(self):
-        out = B.export_snapshot(self.tmp, date(2026, 10, 6), out=self.tmp / "Board.html", vault_name="V")
+        out, _ = B.export_snapshot(self.tmp, date(2026, 10, 6), out=self.tmp / "Board.html", vault_name="V")
         html = out.read_text(encoding="utf-8")
         self.assertNotIn(B.MARKER, html)
         self.assertIn("window.BOARD_DATA = {", html)
@@ -126,7 +130,7 @@ class Snapshot(unittest.TestCase):
         self.assertIn('if (!LIVE) { S.data = window.BOARD_DATA; render(); return; }', html)
 
     def test_snapshot_renders_lists_without_javascript(self):
-        html = B.export_snapshot(self.tmp, date(2026, 10, 6), out=self.tmp / "Board.html").read_text()
+        html = B.export_snapshot(self.tmp, date(2026, 10, 6), out=self.tmp / "Board.html")[0].read_text()
         static = html.split('<main id="main">', 1)[1].split("</main>", 1)[0]
         self.assertIn("Overdue thing", static)                 # Today, rendered as HTML, not only inside the JSON
         self.assertIn("Pick a colour", static)                 # Decisions
@@ -136,13 +140,13 @@ class Snapshot(unittest.TestCase):
     def test_snapshot_escapes_script_close(self):
         make(self.tmp, "Sneaky")
         (self.tmp / "Sneaky.md").write_text((self.tmp / "Sneaky.md").read_text() + "\nbody with </script> inside\n")
-        html = B.export_snapshot(self.tmp, date(2026, 10, 6), out=self.tmp / "Board.html").read_text()
+        html = B.export_snapshot(self.tmp, date(2026, 10, 6), out=self.tmp / "Board.html")[0].read_text()
         self.assertNotIn("</script> inside", html)
         self.assertIn("<\\/script> inside", html)
 
 
 class ReviewFixes(unittest.TestCase):
-    """Fixes from the 2026-10-06 whole-branch review."""
+    """Tree grouping and views that tolerate half-filled notes."""
 
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())
@@ -204,6 +208,73 @@ class ReviewFixesApi(Api):
         self.assertEqual(r["task"][T.STATUS], "dropped")
         self.assertTrue((self.tmp / "Existing.md").exists())
         self.assertFalse((self.tmp / "Archive" / "Existing.md").exists())
+
+
+class TemplatePass(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.today = date(2026, 10, 7)
+
+    def test_labels_name_goals_by_default_and_follow_config(self):
+        self.assertEqual(B.payload(self.tmp, self.today, labels={})["labels"],
+                         {"task": "Task", "project": "Goal", "reminder": "Reminder"})
+        self.assertEqual(B.payload(self.tmp, self.today, labels={"project": "Project"})["labels"]["project"], "Project")
+
+    def test_tree_leaves_reminders_out(self):
+        make(self.tmp, "Call the plumber", kind="reminder", due="2026-10-09")
+        make(self.tmp, "Fix the gutter")
+        p = B.payload(self.tmp, self.today)
+        self.assertEqual(p["tree"]["P"]["loose"], ["Fix the gutter"])
+        self.assertEqual(p["views"]["reminders"], ["Call the plumber"])
+
+    def test_snapshot_has_a_reminders_section(self):
+        make(self.tmp, "Call the plumber", kind="reminder", due="2026-10-09")
+        html = B.export_snapshot(self.tmp, self.today, out=self.tmp / "Board.html")[0].read_text()
+        static = html.split('<main id="main">', 1)[1].split("</main>", 1)[0]
+        self.assertIn(">Reminders<", static)
+        self.assertIn("Call the plumber", static)
+
+    def test_snapshot_rewritten_only_when_it_changed(self):
+        make(self.tmp, "Something")
+        out = self.tmp / "Board.html"
+        self.assertTrue(B.export_snapshot(self.tmp, self.today, out=out)[1])
+        os.utime(out, (0, 0))                         # mark the file so a rewrite would show
+        path, written = B.export_snapshot(self.tmp, self.today, out=out)
+        self.assertFalse(written)
+        self.assertEqual(out.stat().st_mtime, 0)
+        make(self.tmp, "Something new")
+        self.assertTrue(B.export_snapshot(self.tmp, self.today, out=out)[1])
+        self.assertNotEqual(out.stat().st_mtime, 0)
+
+
+class SecondStart(unittest.TestCase):
+    """Starting the board when it is already running says so instead of crashing."""
+
+    def test_board_already_running(self):
+        server = B.make_server(Path(tempfile.mkdtemp()), "127.0.0.1", 0, "V")
+        port = server.server_address[1]
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        try:
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                rc = B.main(["serve", "--port", str(port)])
+            self.assertEqual(rc, 0)
+            self.assertIn(f"already running: http://127.0.0.1:{port}/", out.getvalue())
+        finally:
+            server.shutdown(); server.server_close()
+
+    def test_port_taken_by_something_else(self):
+        blocker = socket.socket()
+        blocker.bind(("127.0.0.1", 0)); blocker.listen()
+        port = blocker.getsockname()[1]
+        try:
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                rc = B.main(["serve", "--port", str(port)])
+            self.assertEqual(rc, 1)
+            self.assertIn(f"--port {port + 1}", out.getvalue())
+        finally:
+            blocker.close()
 
 
 if __name__ == "__main__":
