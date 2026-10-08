@@ -121,10 +121,11 @@
 
   .folders { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:16px; align-items:start; margin-top:16px; }
   .folder { min-width:0; padding:4px 14px 10px; border-radius:var(--r-row); background:var(--card-2); container-type:inline-size; }
-  @container (max-width: 520px) {      /* a narrow folder: the date drops under the title, as on a phone, so the title keeps the width */
+  .listcard { container-type:inline-size; }
+  @container (max-width: 520px) {      /* a narrow list or folder: the date drops under the title, as on a phone, so the title keeps the width */
     .task { grid-template-columns:22px minmax(0, 1fr); row-gap:4px; }
     .task.numbered { grid-template-columns:26px 22px minmax(0, 1fr); }
-    .task .when { grid-column:2; padding-top:0; white-space:normal; }
+    .task .when { grid-column:2; justify-self:start; padding-top:0; white-space:normal; }
     .task.numbered .when { grid-column:3; }
   }
   .folder > header { display:flex; justify-content:space-between; align-items:baseline; gap:12px; padding:14px 6px 10px; border-bottom:1px solid var(--line); }
@@ -219,7 +220,7 @@
     .dumprow { flex-direction:column; align-items:stretch; }
     .task { grid-template-columns:22px minmax(0, 1fr); gap:4px 10px; padding-inline:2px; }   /* the date drops under the title */
     .task.numbered { grid-template-columns:20px 22px minmax(0, 1fr); }
-    .task .when { grid-column:2; padding-top:0; }
+    .task .when { grid-column:2; justify-self:start; padding-top:0; }
     .task.numbered .when { grid-column:3; }
     .task.sub { padding-left:20px; }
     .folders { grid-template-columns:minmax(0, 1fr); }

@@ -9,7 +9,8 @@ How the task board looks. The board itself (`Scripts/tasks_board.html`) holds th
   - `numbered`: numbers on the rows;
   - `arc`: four colours for the arc's gradient;
   - `dark`: `true` when the style has a dark palette as well. The board then follows the computer's light or dark setting and shows an Auto · Light · Dark switch (`.themes`) in the top corner; a pick of Light or Dark is remembered in that browser only. Without it the switch stays hidden and the style is always light.
-- `<name>.css` is the style. It redefines the colour, font, radius and border tokens at the top of `tasks_board.html`, then lays out the parts inside `@media (min-width: 761px)`. Below that width every style uses the shared single-column phone layout.
+- `<name>.css` is the style. It redefines the colour, font, radius and border tokens at the top of `tasks_board.html`, then lays out the parts inside `@media (min-width: 761px)`. Below that width every style uses the shared single-column phone layout. Three columns side by side need about 1100px: Warm Bento, Aura and Oracle keep the 761px layout to a rail and one column (or two columns), and switch to their full layout in `@media (min-width: 1100px)`. Check a new style at 768, 900 and 1024px as well as 1280.
+- A list or By project folder narrower than 520px drops each row's date under its title, in every style (a container query in `tasks_board.html`).
 - A style with `dark` puts its dark colours in a `:root[data-theme="dark"]` block, which a small script sets before the page draws. Every colour has to be a token for that to work, so Show Your Working adds five of its own: `--edge` (the ink line round sheets and controls), `--hard` (their offset shadow), `--grid` (the paper's ruling), `--rail` (the list rail's background) and `--tick` (the ticked checkbox's mark, an SVG data URI, so its colour can change with the palette).
 - `previews/` holds the README screenshots.
 

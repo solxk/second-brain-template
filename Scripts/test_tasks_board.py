@@ -6,6 +6,7 @@ import http.client
 import io
 import json
 import os
+import re
 import socket
 import sys
 import tempfile
@@ -369,6 +370,30 @@ class Styles(unittest.TestCase):
             self.assertTrue(meta.get("label") and meta.get("blurb"), name)
             if meta.get("dark"):                              # a style that offers dark has a dark palette
                 self.assertIn(':root[data-theme="dark"]', (B.STYLES_DIR / f"{name}.css").read_text(), name)
+
+    def test_the_first_desktop_layout_has_two_columns_at_most(self):
+        # three columns side by side squeezed the list to nothing between 761px and about 1000px; they wait for 1100px
+        def tracks(value):                                    # "230px repeat(2, minmax(0, 1fr))" is 3
+            parts, depth, cur = [], 0, ""
+            for ch in value.strip() + " ":                    # split on the spaces outside brackets
+                if ch == " " and depth == 0:
+                    if cur:
+                        parts.append(cur)
+                    cur = ""
+                    continue
+                depth += (ch == "(") - (ch == ")")
+                cur += ch
+            total = 0
+            for p in parts:
+                m = re.fullmatch(r"repeat\((\d+),(.*)\)", p)
+                total += int(m[1]) * tracks(m[2]) if m else 1
+            return total
+        self.assertEqual(tracks("230px 250px minmax(0, 1fr) 300px"), 4)
+        for name in B.styles()["styles"]:
+            block = (B.STYLES_DIR / f"{name}.css").read_text().split("@media (min-width: 761px) {", 1)[1].split("\n}", 1)[0]
+            cols = re.search(r"\.app \{[^}]*grid-template-columns:([^;]+);", block)
+            self.assertTrue(cols, name)
+            self.assertLessEqual(tracks(cols[1]), 2, name)
 
     def test_light_or_dark_is_set_before_the_first_paint(self):
         html = B.page("working")

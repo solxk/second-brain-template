@@ -1,5 +1,6 @@
 /* Aura: frosted glass on a periwinkle-to-mint ground. One gradient arc fills with the day; mint means done.
-   Desktop: lists down the left, the arc and the greeting up top, the list in the middle, summaries on the right. */
+   Desktop: lists down the left, the arc and the greeting up top, the list in the middle, summaries on the right
+   (below 1100px the arc and the summaries go under the list). */
 :root {
   --page-bg:radial-gradient(1000px 700px at 0% 0%, #EEF2FC 0%, transparent 60%), radial-gradient(900px 700px at 100% 100%, #E2F6EE 0%, transparent 55%), linear-gradient(165deg, #E4E7F7 0%, #D3D6F0 100%) fixed;
   --card:rgba(255,255,255,.7); --card-2:#FFFFFF; --ink:#070B1A; --muted:#5D6378; --line:#E6E9F4;
@@ -36,7 +37,7 @@ body { background-attachment:fixed; }
 .task.w-late { border-left-color:var(--signal); }
 .task.w-soon { border-left-color:#8F94F0; }
 .task input[type=checkbox] { border-color:#C9CCEB; }
-.when { padding:4px 10px; border-radius:8px; background:#F1F3F9; color:#3B4155; font-weight:600; }
+.task .when { padding:4px 10px; border-radius:8px; background:#F1F3F9; color:#3B4155; font-weight:600; }
 .when.late { background:var(--signal-wash); color:var(--signal-ink); }
 .when.soon { background:#EEF0FD; color:#4A4EC4; }
 .chip { border-radius:8px; }
@@ -54,8 +55,8 @@ body { background-attachment:fixed; }
 #panel { background:rgba(255,255,255,.92); -webkit-backdrop-filter:blur(24px); backdrop-filter:blur(24px); }
 
 @media (min-width: 761px) {
-  .app { display:grid; align-items:start; grid-template-columns:230px 250px minmax(0, 1fr) 300px; grid-template-rows:auto auto auto 1fr;
-         grid-template-areas:"top capture capture capture" "top banner banner banner" "top gauge hero side" "top list list side"; }
+  .app { display:grid; align-items:start; grid-template-columns:230px minmax(0, 1fr); grid-template-rows:repeat(5, auto) 1fr;
+         grid-template-areas:"top capture" "top banner" "top hero" "top list" "top gauge" "top side"; }   /* the arc and the summaries under the list, as on a phone */
   .top { grid-area:top; flex-direction:column; align-items:stretch; flex-wrap:nowrap; gap:16px; position:sticky; top:24px; }
   #tabs { flex-direction:column; flex:0 0 auto; overflow:visible; }
   #tabs button { justify-content:space-between; width:100%; min-height:44px; }
@@ -67,5 +68,11 @@ body { background-attachment:fixed; }
   .gaugecard { grid-area:gauge; align-self:stretch; }
   .hero { grid-area:hero; align-self:stretch; }
   .listcard { grid-area:list; background:rgba(255,255,255,.55); }
-  .side { grid-area:side; }
+  .side { grid-area:side; display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); }   /* reminders and waiting side by side once there's room */
+  .side-folders { grid-column:1 / -1; }
+}
+@media (min-width: 1100px) {
+  .app { grid-template-columns:230px 250px minmax(0, 1fr) 300px; grid-template-rows:auto auto auto 1fr;
+         grid-template-areas:"top capture capture capture" "top banner banner banner" "top gauge hero side" "top list list side"; }
+  .side { display:flex; }
 }

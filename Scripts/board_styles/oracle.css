@@ -1,5 +1,6 @@
 /* Oracle: a dark command centre. The morning briefing sits in a bracketed frame; blue is what Claude tells you,
-   orange is what needs you. Desktop: a list rail on the left, briefing and list in the middle, summaries on the right. */
+   orange is what needs you. Desktop: a list rail on the left, briefing and list in the middle, summaries on the right
+   (under the list below 1100px). */
 :root {
   --page-bg:#070B12; --card:#0C121C; --card-2:#111A28; --ink:#DCE6F2; --muted:#7F93AD; --line:#1C2738;
   --accent:#5AA9FF; --on-accent:#070B12; --signal:#FF8A3D; --signal-wash:#2A1A10; --signal-ink:#FFA066;
@@ -57,8 +58,8 @@
 
 @media (min-width: 761px) {
   .app { max-width:none; margin:0; padding:0; min-height:100vh; display:grid; gap:20px 28px; align-items:start;
-         grid-template-columns:236px minmax(0, 1fr) 320px; grid-template-rows:auto auto auto 1fr;
-         grid-template-areas:"top banner banner" "top hero hero" "top capture side" "top list side"; }
+         grid-template-columns:236px minmax(0, 1fr); grid-template-rows:repeat(4, auto) 1fr;
+         grid-template-areas:"top banner" "top hero" "top capture" "top list" "top side"; }   /* the summaries under the list */
   .top { grid-area:top; position:sticky; top:0; height:100vh; padding:32px 20px; flex-direction:column; flex-wrap:nowrap; align-items:stretch;
          gap:28px; background:var(--card); border-right:1px solid var(--line); align-self:stretch; }
   .brand { flex-direction:column; align-items:flex-start; gap:6px; }
@@ -69,7 +70,15 @@
   .banner { grid-area:banner; margin:28px 32px 0 0; }
   .hero { grid-area:hero; margin:28px 32px 0 0; }
   .banner:not([hidden]) + .hero { margin-top:0; }
-  .capture { grid-area:capture; }
-  .listcard { grid-area:list; margin-bottom:64px; }
-  .side { grid-area:side; margin-right:32px; }
+  .capture { grid-area:capture; margin-right:32px; }
+  .listcard { grid-area:list; margin-right:32px; }
+  .side { grid-area:side; margin:0 32px 64px 0; display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); }   /* reminders and waiting side by side once there's room */
+  .side-folders { grid-column:1 / -1; }
+}
+@media (min-width: 1100px) {
+  .app { grid-template-columns:236px minmax(0, 1fr) 320px; grid-template-rows:auto auto auto 1fr;
+         grid-template-areas:"top banner banner" "top hero hero" "top capture side" "top list side"; }
+  .capture { margin-right:0; }
+  .listcard { margin:0 0 64px; }
+  .side { display:flex; margin-bottom:0; }
 }
