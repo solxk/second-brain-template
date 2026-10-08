@@ -29,7 +29,7 @@ Append each answer to `Inbox/Setup notes.md` the moment it's given, before you a
 Before question 1, ask their first name, as they'd write it, and put it at the top of `Inbox/Setup notes.md`: `Me.md` opens with it and `vault.json` needs it.
 
 Who they are:
-1. What are you working on or building? (A business, a side business, client work, something you're making. Each becomes a folder in `Projects/`.) If one sounds like an idea so far ("we're going to", "I guess"), ask whether any work has started. If none has, it's a line under Ideas in `Resources/Resources.md`, not a folder; ask before making a folder for it. It gets a folder when work starts.
+1. What are you working on or building? (A business, a side business, client work, something you're making, or something you run for other people, like a club, a committee or a team, paid or not. Each becomes a folder in `Projects/`.) If they say "I don't know if that counts", ask whether they run it or just belong to it: running it is work and goes in `Projects/`; belonging to it is life. If one sounds like an idea so far ("we're going to", "I guess"), ask whether any work has started. If none has, it's a line under Ideas in `Resources/Resources.md`, not a folder; ask before making a folder for it. It gets a folder when work starts.
 2. What parts of your life need looking after? (Health, money, home, family, the day job, study. Each becomes a folder in `Areas/`. Group related things: gym and sleep are both Health. Make an area only where there will be something in it, a task, a reminder or a habit; the day job often has none.)
 3. What would you like to have done a year from now, in a sentence?
 
@@ -117,7 +117,7 @@ Without Google, phone capture is simple: note it however you already do (Notes, 
 
 ## 5. Brain dump
 
-Ask: "Everything on your mind that needs doing, big or small, one per line. Don't sort it."
+Ask: "Everything on your mind that needs doing, big or small, one per line. Don't sort it." When they pause, ask "Anything else?" and wait for a no before showing the table.
 
 Then, for each line, propose one of:
 - a **task**: which project or area, a priority with a one-line reason, the effort, whether it's a decision, any real deadline, and the day they plan to do it if they have one;
@@ -131,7 +131,9 @@ An event on a date (a race, an exam, a party) is a reminder on its day, plus a t
 
 Something that repeats (a long run every Sunday) is a habit, or a repeating event in their calendar: tasks and reminders don't repeat. Say so if it comes up.
 
-Ask about any date that isn't certain, and keep the two kinds apart: a deadline someone else set is `--due`; a day they mean to do it is `--when`. Show the proposed list as a table and apply their corrections. Then create everything: tasks with `python3 Scripts/tasks.py add ...`, reminders with `add "..." --kind reminder --when <date>`, and the rest where it belongs.
+A choice the owner parks ("nothing to decide right now", "I'll think about it") is still a decision: a task with `--decision --status someday`, the figures in its note. That keeps it on record and out of the daily brief. Never a Loose end.
+
+Ask about any date that isn't certain, and keep the two kinds apart: a deadline someone else set is `--due`; a day they mean to do it is `--when`. Show the proposed list as a table and apply their corrections. If more items arrive after the table has been shown (often with the corrections), put them in a second short table and get their OK before creating them. Never save an item the owner hasn't seen sorted; "just remind me about all of it" isn't an OK. Then create everything: tasks with `python3 Scripts/tasks.py add ...`, reminders with `add "..." --kind reminder --when <date>`, and the rest where it belongs.
 
 Then add two reminders of your own, and tell them why:
 - "Re-read Me.md and fix whatever's drifted", one month from today;
