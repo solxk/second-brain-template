@@ -26,22 +26,25 @@ About twenty minutes. Ask one question at a time, in plain words, with no jargon
 
 Append each answer to `Inbox/Setup notes.md` the moment it's given, before you ask the next question. On a resume, read that file first and pick up at the first question without an answer.
 
+Before question 1, ask their first name, as they'd write it, and put it at the top of `Inbox/Setup notes.md`: `Me.md` opens with it and `vault.json` needs it.
+
 Who they are:
-1. What are you working on or building? (A business, a side business, client work, something you're making. Each becomes a folder in `Projects/`.)
+1. What are you working on or building? (A business, a side business, client work, something you're making. Each becomes a folder in `Projects/`.) If one sounds like an idea so far ("we're going to", "I guess"), ask whether any work has started. If none has, it's a line under Ideas in `Resources/Resources.md`, not a folder; ask before making a folder for it. It gets a folder when work starts.
 2. What parts of your life need looking after? (Health, money, home, family, the day job, study. Each becomes a folder in `Areas/`. Group related things: gym and sleep are both Health. Make an area only where there will be something in it, a task, a reminder or a habit; the day job often has none.)
 3. What would you like to have done a year from now, in a sentence?
 
 How they work:
 4. When does your work day start, and when are you sharpest?
 5. What usually trips you up? (Starting, finishing, deciding, remembering, saying no.)
-6. What do you want from an AI partner: pushing you, keeping you organised, thinking things through with you, doing the admin? Direct or gentle?
+6. What do you want from an AI partner: pushing you, keeping you organised, thinking things through with you, doing the admin?
+7. Should it be direct with you, or gentle?
 
 Logistics:
-7. Where do your calendar, email, tasks and reminders live today? (Google, Outlook, Apple, a notebook, nowhere.)
-8. Mac or Windows? Which phone?
+8. Where do your calendar, email, tasks and reminders live today? (Google, Outlook, Apple, a notebook, nowhere.)
+9. Mac or Windows? Which phone?
 
 Close:
-9. Anything about you that an assistant usually gets wrong?
+10. Anything about you that an assistant usually gets wrong?
 
 Something with a finish line ("sell the flat", "launch the shop") isn't a folder. It belongs inside the project or area it's part of, and becomes a goal or a task later.
 
@@ -58,7 +61,7 @@ Shape:
 
 > Written from the setup interview on <date>. This file is mine. Any AI I use reads it first.
 
-I'm <name>. <One paragraph: what they do and, in a line, what they're juggling.>
+I'm <name>. <Two or three sentences on what they do, in words that will still be true in a year. No project names, statuses or dates: those live in `Map.md` and the folder notes.>
 
 ## This year
 <The one-year sentence.>
@@ -82,12 +85,12 @@ Show it to them. Ask them to read it and correct anything. Don't build anything 
 
 From the notes:
 
-- **Projects.** Make one folder per thing they're working on or building: `Projects/<Name>/`, with a folder note `Projects/<Name>/<Name>.md`.
+- **Projects.** Make one folder per thing they're working on or building, and only for work that's under way (an idea with no work started stays a line in `Resources/Resources.md`): `Projects/<Name>/`, with a folder note `Projects/<Name>/<Name>.md`.
   - Frontmatter: `status: active`, `one-liner:`, `created-by: claude`.
   - Sections: **What it is** (two or three sentences from the interview), **Next actions** (containing exactly `![[Tasks.base#Here]]`), **Recently shifted** (one dated line: "set up"), **Loose ends** and **Key links**.
 - **Freelancers.** A freelancer's regular clients each get a project folder when each brings its own stream of work. Otherwise make one folder for the freelance business, with clients as tasks. Ask if it isn't obvious.
 - **Areas.** Make one folder per part of life they named, `Areas/<Name>/`, with the same folder-note shape.
-- **Habits** they mentioned (sleep, gym days) go under Loose ends in their area's folder note, not into tasks.
+- **Habits** they mentioned (sleep, gym days) go under Loose ends in their area's folder note, not into tasks. Loose ends never hold anything with a date.
 - **Map.md.** Rewrite its "Projects and areas" section so it lists what exists now, one line each. Keep it short; it's a map, not an index.
 - **No goals yet.** Don't make any goals (`kind: project`) at setup. They come later, when a group of tasks clearly belongs together.
 
@@ -118,9 +121,13 @@ Ask: "Everything on your mind that needs doing, big or small, one per line. Don'
 
 Then, for each line, propose one of:
 - a **task**: which project or area, a priority with a one-line reason, the effort, whether it's a decision, any real deadline, and the day they plan to do it if they have one;
-- a **reminder**: the day it's for, no folder needed;
+- a **reminder**: the day it's for, linked to its area when it plainly belongs to one (`--project Home`);
 - a **To watch** entry: a link or video;
 - a **habit**: Loose ends in the area note. If it has no area yet, offer to make one.
+
+People call everything a reminder. The rule: if it takes real work, or has a date someone else set, it's a task, whatever they call it. Designing the invitations for a party is a task; transferring money for it is a reminder. Booking an appointment you keep putting off (dentist, vet) is a task too, low priority if need be. Say so in one line and let them overrule.
+
+An event on a date (a race, an exam, a party) is a reminder on its day, plus a task for anything that must be done for it (enter the race, book the train). It's never a habit. A target with a date ("$2k emergency fund by summer") is a task with that deadline, or `someday` if no work has started. Loose ends never hold anything with a date.
 
 Something that repeats (a long run every Sunday) is a habit, or a repeating event in their calendar: tasks and reminders don't repeat. Say so if it comes up.
 

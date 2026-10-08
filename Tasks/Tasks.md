@@ -35,13 +35,15 @@ Three levels, no deeper:
 
 Only a goal can have tasks under it, and a goal can't sit under another goal. `add` refuses both; `sync` reports anything hand-made that breaks the rule.
 
-A **reminder** is a task note with `kind: reminder`: a nudge on a day, no folder needed. Its day is its `when` ("school trip money, Friday" is Friday), never `due`; it's saved without the fields only tasks use. The brief shows it from two days before, marks it overdue once the day has passed, and it stays until ticked. Reminders never show in Today; they have their own list on the board and their own section in the brief.
+A **reminder** is a task note with `kind: reminder`: a nudge on a day with nothing to do but remember it. It needs no folder, but give it one when it plainly belongs to one (`--project Home`). Its day is its `when` ("school trip money, Friday" is Friday), never `due`; it's saved without the fields only tasks use. The brief shows it from two days before, marks it overdue once the day has passed, and it stays until ticked. Reminders never show in Today; they have their own list on the board and their own section in the brief.
+
+Task or reminder? People call everything a reminder; the owner's word doesn't decide it. If it takes real work, or has a date someone else set, it's a task: designing the party invitations is a task, transferring the money for it is a reminder, and booking an appointment (dentist, vet, boiler service) is a task, low priority if need be. Say so in one line and let the owner overrule. An event on a date (a race, an exam, a party) is a reminder on its day, plus a task for anything that must be done for it; never a habit. A target with a date is a task with that deadline. Loose ends in a folder note never hold anything with a date.
 
 Nothing repeats on its own. Something weekly (a long run on Sundays) is a habit, kept under Loose ends in its area, or a repeating event in the owner's calendar.
 
 ## Fields
 
-- `due` is a **deadline**: a real date someone else set. Never use it for the day the owner means to do something.
+- `due` is a **deadline**: a real date someone else set. Never use it for the day the owner means to do something. If the owner decides to finish before a deadline ("I'll aim for Friday"), set `when` to that day and leave `due` as the other side set it.
 - `when` is the **planned** day: when the owner means to do it. To get a task done on a set day, give it a `when`. A reminder's day is its `when`.
 - `effort`: deep (a focused block), medium (an ordinary session) or easy (minutes; the board says "quick"). Claude proposes it; the owner overrules.
 - `decision: true` marks a yes/no that's the owner's to make. The brief lists open decisions, oldest first.
