@@ -35,9 +35,9 @@ Each answer becomes a task, a reminder, a line in a folder note, or nothing. Use
 ## 2. Write it down
 
 - **Make it true:** re-read each folder note and task note this session touched, and fix any sentence the session made untrue. The log line keeps the history; the body should still read true.
-- **Close what's finished:** list the tasks that look done (finished in this session, or they said so) under "Close these?". Close each on their yes with `python3 Scripts/tasks.py set "<task>" --status done --note "<what finished it>" --source wrap`.
+- **Close what's finished:** if they've told you a task is done ("notice went"), that's the yes: close it and list it under "Closed". List the tasks that only look done (finished in this session, but they haven't said so) under "Close these?", and close each on their yes. Either way: `python3 Scripts/tasks.py set "<task>" --status done --note "<what finished it>" --source wrap`.
 - **Log what moved:** for a task that moved but stays open, `python3 Scripts/tasks.py set "<task>" --note "<what moved>" --source wrap`.
-- **Recently shifted:** one line for each project or area that moved, at the top of the "Recently shifted" section of its folder note. Use the shape `- <YYYY-MM-DD> — **<what moved, in a few words>.** <one or two sentences>`. If a line dated today is already there, revise it instead of adding a second. Keep eight lines; move older ones to a "History" section at the bottom of the note.
+- **Recently shifted:** one line for each project or area that moved (closing or adding a task counts: a booked parents' evening moves Family), at the top of the "Recently shifted" section of its folder note. Use the shape `- <YYYY-MM-DD> — **<what moved, in a few words>.** <one or two sentences>`. If a line dated today is already there, revise it instead of adding a second. Keep eight lines; move older ones to a "History" section at the bottom of the note.
 
 ## 3. Plan tomorrow
 
@@ -47,7 +47,7 @@ Skip this step if `Me.md` says to leave planning to the morning; the brief will 
 
 - **Unfinished today:** if tasks planned for today or earlier are still open, offer "Carry everything unfinished to tomorrow" as one answer. On yes, run `python3 Scripts/tasks.py set "<task>" --when <tomorrow> --source wrap` for each one that isn't on hold. Their carry count survives, so tomorrow they read "Carried N days".
 - **Propose tomorrow** the way the brief does (`.claude/skills/brief/SKILL.md`, step 4): up to the day's limit from `Me.md`, deadlines first, then carried tasks, then high priority. Put the rest on one line, "Left for another day". Never plan a task that's on hold. If you plan fewer than the limit, say why in a few words ("Tuesday is lab meeting").
-- **First thing:** name the first thing to do tomorrow as one concrete action.
+- **First thing:** name the first thing to do tomorrow as one concrete action. Check it against Start here in `python3 Scripts/tasks.py --today <tomorrow> brief`; if they differ, say which comes first and why.
 - **When they OK the plan:** run `python3 Scripts/tasks.py set "<task>" --when <tomorrow> --source wrap` for each task. Add calendar blocks only if they want them and a calendar is connected; check tomorrow's events first, so nothing is added twice.
 
 ## 4. Tidy up
@@ -71,6 +71,9 @@ Decided
 
 Moved
 - <Folder>: <what moved>              (five lines at most)
+
+Closed
+- <task> · <what finished it>
 
 Close these?
 - <task> · <why it looks done>

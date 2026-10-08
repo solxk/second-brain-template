@@ -46,7 +46,7 @@ Their brief and wrap-up (say first, in one line: "Each session starts with a sho
 
 Logistics:
 11. Where do your calendar, email, tasks and reminders live today? (Google, Outlook, Apple, a notebook, nowhere.)
-12. Mac or Windows? Which phone?
+12. Mac or Windows? Which phone? If the computer belongs to an employer, say once that personal notes would sit on it, and ask whether there's one of their own.
 
 Close:
 13. Anything about you that an assistant usually gets wrong?
