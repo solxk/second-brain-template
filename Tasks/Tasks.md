@@ -37,7 +37,7 @@ Only a goal can have tasks under it, and a goal can't sit under another goal. `a
 
 A **reminder** is a task note with `kind: reminder`: a nudge on a day with nothing to do but remember it. It needs no folder, but give it one when it plainly belongs to one (`--project Home`). Its day is its `when` ("school trip money, Friday" is Friday), never `due`; it's saved without the fields only tasks use. The brief shows it from two days before, marks it overdue once the day has passed, and it stays until ticked. Reminders never show in Today; they have their own list on the board and their own section in the brief.
 
-Task or reminder? People call everything a reminder; the owner's word doesn't decide it. If it takes real work, or has a date someone else set, it's a task: designing the party invitations is a task, transferring the money for it is a reminder, and booking an appointment (dentist, vet, boiler service) is a task, low priority if need be. Say so in one line and let the owner overrule. An event on a date (a race, an exam, a party) is a reminder on its day, plus a task for anything that must be done for it; never a habit. A target with a date is a task with that deadline. Loose ends in a folder note never hold anything with a date.
+Task or reminder? People call everything a reminder; the owner's word doesn't decide it. If it takes real work, or has a date someone else set, it's a task: designing the party invitations is a task, transferring the money for it is a reminder, and booking an appointment (dentist, vet, boiler service) is a task, low priority if need be. Say so in one line and let the owner overrule. An event on a date (a race, an exam, a party) is a reminder on its day, plus a task for anything that must be done for it; never a habit. "Book X" has two dates: when X is (the reminder) and the last day to book (the task's `due`); record both. Never invent a deadline or a dependency the owner didn't state. A target with a date is a task with that deadline. Loose ends in a folder note never hold anything with a date.
 
 Nothing repeats on its own. Something weekly (a long run on Sundays) is a habit, kept under Loose ends in its area, or a repeating event in the owner's calendar.
 
@@ -59,6 +59,8 @@ Nothing repeats on its own. Something weekly (a long run on Sundays) is a habit,
   - `someday`: parked. It's a status, not a folder; parked tasks have their own list on the board;
   - `done`: finished. Done tasks move to `Tasks/Archive/` a week after;
   - `dropped`: not doing it. It needs a one-line reason, and `sync` moves it to `Tasks/Archive/` straight away.
+
+When you show the owner a table of tasks, keep it to three columns at most (what, where, when); split a wider or longer one.
 
 ## Lists on the board
 

@@ -127,13 +127,15 @@ Then, for each line, propose one of:
 
 People call everything a reminder. The rule: if it takes real work, or has a date someone else set, it's a task, whatever they call it. Designing the invitations for a party is a task; transferring money for it is a reminder. Booking an appointment you keep putting off (dentist, vet) is a task too, low priority if need be. Say so in one line and let them overrule.
 
-An event on a date (a race, an exam, a party) is a reminder on its day, plus a task for anything that must be done for it (enter the race, book the train). It's never a habit. A target with a date ("$2k emergency fund by summer") is a task with that deadline, or `someday` if no work has started. Loose ends never hold anything with a date.
+An event on a date (a race, an exam, a party) is a reminder on its day, plus a task for anything that must be done for it (enter the race, book the train). It's never a habit. When a line is "book X" or "enter X", ask both dates: when X is (the reminder's day) and the last day to book (the task's `--due`), and record both. A target with a date ("$2k emergency fund by summer") is a task with that deadline, or `someday` if no work has started. Loose ends never hold anything with a date.
 
 Something that repeats (a long run every Sunday) is a habit, or a repeating event in their calendar: tasks and reminders don't repeat. Say so if it comes up.
 
 A choice the owner parks ("nothing to decide right now", "I'll think about it") is still a decision: a task with `--decision --status someday`, the figures in its note. That keeps it on record and out of the daily brief. Never a Loose end.
 
-Ask about any date that isn't certain, and keep the two kinds apart: a deadline someone else set is `--due`; a day they mean to do it is `--when`. Show the proposed list as a table and apply their corrections. If more items arrive after the table has been shown (often with the corrections), put them in a second short table and get their OK before creating them. Never save an item the owner hasn't seen sorted; "just remind me about all of it" isn't an OK. Then create everything: tasks with `python3 Scripts/tasks.py add ...`, reminders with `add "..." --kind reminder --when <date>`, and the rest where it belongs.
+If an item is vague ("the gas safe thing by end of month"), ask what it is before you name it, and whether a letter, email or form is behind it. If there is, ask them to paste it in or send a photo now; if they can't, make "Find the … letter" its own task. Never give a date as a deadline unless they stated it as one (mark a guessed date as a guess in the table), and never add a dependency they didn't state.
+
+Ask about any date that isn't certain, and keep the two kinds apart: a deadline someone else set is `--due`; a day they mean to do it is `--when`. Show the proposed list as a table of at most three columns (what, where, when), with "high" or "decision" in the what cell only when it applies; over about twelve rows, show one folder at a time. Apply their corrections. If more items arrive after the table has been shown (often with the corrections), put them in a second short table and get their OK before creating them. Never save an item the owner hasn't seen sorted; "just remind me about all of it" isn't an OK. Then create everything: tasks with `python3 Scripts/tasks.py add ...`, reminders with `add "..." --kind reminder --when <date>`, and the rest where it belongs.
 
 Then add two reminders of your own, and tell them why:
 - "Re-read Me.md and fix whatever's drifted", one month from today;
@@ -153,13 +155,13 @@ Then add two reminders of your own, and tell them why:
    Then let them choose how it looks. Give them http://127.0.0.1:8765/styles: it shows their own board in each of the four styles, on a computer and on a phone. When they pick one, run `python3 Scripts/tasks_board.py style <name>` and ask them to reload the board. Show Your Working is already set, so if they don't mind, move on. Tell them they can change it any time by asking.
 3. Explain the two rituals in plain words:
    - At the start of a session, Claude briefs them.
-   - At the end, they say "what did we decide?" or "wrap up", and Claude writes down what changed and what's next.
+   - At the end, they say "what did we decide?" or "wrap up", and Claude writes down what changed and what's next. When they just stop ("right, done", "that's enough for this morning"), Claude names the wrap-up and offers it in one line before doing it, and ends with the decisions made, not only the next steps.
 
    They never file anything themselves.
-4. Explain the phone:
+4. Read this folder's path yourself, and tell them in one line what it's in: iCloud Drive, OneDrive, Dropbox, Google Drive, or none of them. Don't ask them; if they don't know, the path does. Then explain the phone:
    - capture goes to the Phone list (step 4), or gets pasted in later;
-   - if the folder syncs to their phone, `Tasks/Board.html` is a read-only copy of the board. If two computers share the folder, ask which one should write that copy, and set `"snapshot_host"` in `vault.json` to its name (run `hostname` on it); otherwise the sync service makes conflict copies of it.
-5. Explain backup in one line: it's a folder, so back it up like any other. If it lives in iCloud Drive, OneDrive, Dropbox or Google Drive, it's already copied. If they ever want a history of every change, it can become a git repo, and Claude will commit at the end of each session.
+   - if the path shows the folder syncs to their phone, `Tasks/Board.html` is a read-only copy of the board. If two computers share the folder, ask which one should write that copy, and set `"snapshot_host"` in `vault.json` to its name (run `hostname` on it); otherwise the sync service makes conflict copies of it.
+5. Explain backup in one line: it's a folder, so back it up like any other. If the path is in iCloud Drive, OneDrive, Dropbox or Google Drive, it's already copied; if it isn't, say plainly there's no phone copy and no backup yet, and offer one next step. If they ever want a history of every change, it can become a git repo, and Claude will commit at the end of each session.
 6. Delete `Inbox/Setup notes.md` and set `"setup": "done"` in `vault.json`.
 7. End by saying what to try tomorrow: open a session and say "what's on today?".
 
