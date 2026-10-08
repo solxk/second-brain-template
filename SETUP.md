@@ -31,6 +31,8 @@ Before question 1, ask their first name, as they'd write it, and put it at the t
 Who they are:
 1. What are you working on or building? (A business, a side business, client work, something you're making, or something you run for other people, like a club, a committee or a team, paid or not. Each becomes a folder in `Projects/`.) If they say "I don't know if that counts", ask whether they run it or just belong to it: running it is work and goes in `Projects/`; belonging to it is life. If one sounds like an idea so far ("we're going to", "I guess"), ask whether any work has started. If none has, it's a line under Ideas in `Resources/Resources.md`, not a folder; ask before making a folder for it. It gets a folder when work starts.
 2. What parts of your life need looking after? (Health, money, home, family, the day job, study. Each becomes a folder in `Areas/`. Group related things: gym and sleep are both Health. Make an area only where there will be something in it, a task, a reminder or a habit; the day job often has none.)
+
+   Something with a finish line ("sell the flat", "launch the shop", "wind up Dad's estate", "a one-off job for a client") isn't a folder. It belongs inside the project or area it's part of, as tasks now and a goal once a few of them cluster. If they ask for one to be "its own thing", say that in two sentences: a folder is for a part of their work or life that goes on; a finish line lives inside one, so nothing is left behind when it's done. Then let them choose, and make it a folder only if they still want one.
 3. What would you like to have done a year from now, in a sentence?
 
 How they work:
@@ -50,8 +52,6 @@ Logistics:
 
 Close:
 13. Anything about you that an assistant usually gets wrong?
-
-Something with a finish line ("sell the flat", "launch the shop") isn't a folder. It belongs inside the project or area it's part of, and becomes a goal or a task later.
 
 ## 2. Write Me.md and get it approved
 
@@ -141,7 +141,7 @@ Something that repeats (a long run every Sunday) is a habit, or a repeating even
 
 A choice the owner parks ("nothing to decide right now", "I'll think about it") is still a decision: a task with `--decision --status someday`, the figures in its note. That keeps it on record and out of the daily brief. Never a Loose end. Ask by when it has to be made. If the outside world sets that date (a form, a pension provider), it's the task's `--due`; if not, write it in the note and add a reminder shortly before it, so the choice comes back.
 
-If an item is vague ("the gas safe thing by end of month"), ask what it is before you name it, and whether a letter, email or form is behind it. If there is, ask them to paste it in or send a photo now; if they can't, make "Find the … letter" its own task. Never give a date as a deadline unless they stated it as one, and never add a dependency they didn't state. A half-remembered or guessed deadline ("by end of month", "the VAT is sometime in November") may show in the table marked as a guess, but it goes in the task's note as a guess, not in `--due`: `due` stays empty until the letter or email confirms it.
+If an item is vague ("the gas safe thing by end of month"), ask what it is before you name it, and whether a letter, email or form is behind it. If there is, ask them to paste it in or send a photo now; if they can't, make "Find the … letter" its own task. Never give a date as a deadline unless they stated it as one, and never add a dependency they didn't state. If something they're waiting for was promised by a date that has already gone ("by the end of September"), that date is its `--chase-after`, so it shows as late from the start; the day they'll chase goes in `--when`. Never set a chase date of tomorrow for something already overdue. A half-remembered or guessed deadline ("by end of month", "the VAT is sometime in November") may show in the table marked as a guess, but it goes in the task's note as a guess, not in `--due`: `due` stays empty until the letter or email confirms it.
 
 Ask about any date that isn't certain, and keep the two kinds apart: a deadline someone else set is `--due`; a day they mean to do it is `--when`. Show the proposed list as a table of at most three columns (what, where, when), with "high" or "decision" in the what cell only when it applies; over about twelve rows, show one folder at a time. Apply their corrections. If more items arrive after the table has been shown (often with the corrections), put them in a second short table and get their OK before creating them. Never save an item the owner hasn't seen sorted; "just remind me about all of it" isn't an OK. Then create everything: tasks with `python3 Scripts/tasks.py add ...`, reminders with `add "..." --kind reminder --when <date>`, and the rest where it belongs.
 
@@ -166,7 +166,7 @@ Then add two reminders of your own, and tell them why:
    - At the end, they say "what did we decide?", "wrap up" or `/wrap`, and Claude writes down what changed and what's next. When they just stop ("right, done", "that's enough for this morning"), Claude names the wrap-up and offers it in one line before doing it, and ends with the decisions made, not only the next steps.
 
    They never file anything themselves.
-4. Read this folder's path yourself, and tell them in one line what it's in: iCloud Drive, OneDrive, Dropbox, Google Drive, or none of them. Don't ask them; if they don't know, the path does. Then explain the phone:
+4. Read this folder's path yourself, and tell them in one line what it's in: iCloud Drive, OneDrive, Dropbox, Google Drive, or none of them. Don't ask them; if they don't know, the path does. Read it from the shell (`pwd`), and say only what that shows; never state a path you didn't read. If you can't read it, say so and ask them to check where the folder sits. Then explain the phone:
    - capture goes to the Phone list (step 4), or gets pasted in later;
    - if the path shows the folder syncs to their phone, `Tasks/Board.html` is a read-only copy of the board. If two computers share the folder, ask which one should write that copy, and set `"snapshot_host"` in `vault.json` to its name (run `hostname` on it); otherwise the sync service makes conflict copies of it.
 5. Explain backup in one line: it's a folder, so back it up like any other. If the path is in iCloud Drive, OneDrive, Dropbox or Google Drive, it's already copied; if it isn't, say plainly there's no phone copy and no backup yet, and offer one next step. If they ever want a history of every change, it can become a git repo, and Claude will commit at the end of each session.

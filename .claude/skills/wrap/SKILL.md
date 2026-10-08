@@ -1,6 +1,6 @@
 ---
 name: wrap
-description: Use when the owner types /wrap, or says "what did we decide?", "wrap up", "done for today", "that's enough", or otherwise stops. Writes down what the session decided and changed, closes finished tasks, and plans the next day. Safe to run twice.
+description: Use when the owner types /wrap or asks for it ("what did we decide?", "wrap up"), or when they stop ("done for today", "right, that's enough", "right, done"), which gets a one-line offer first. Writes down what the session decided and changed, closes finished tasks, and plans the next day. Safe to run twice.
 ---
 
 # Wrap
@@ -9,7 +9,7 @@ The end of a session or a day. Its job: everything decided is written down where
 
 Read the "Starting and ending the day" section of `Me.md` first. It says what the owner wants asked at the end, and whether to plan tomorrow now or leave it to the morning. Their words win over the defaults below. If they want it done differently, suggest the change to that section; edit `Me.md` only when they ask you to.
 
-**When they just stop** ("right, done", "that's enough for this morning"), don't wrap up silently. Name it and offer it in one line: "Shall I wrap up? I'll write down what we decided and plan tomorrow." Go on their yes. Offer it too when a conversation is clearly finishing. If `Me.md` says not to ask questions at the end ("just write it down"), that standing instruction is the yes: say in one line that you're writing it down, then do it, without asking.
+**When they just stop** ("right, done", "done for today", "that's enough for today", "that's enough for this morning"), don't wrap up silently. Ending the day isn't asking for the wrap; only "wrap up", "what did we decide?" or `/wrap` runs it straight away. Name it and offer it in one line: "Shall I wrap up? I'll write down what we decided and plan tomorrow." Go on their yes. Offer it too when a conversation is clearly finishing. If `Me.md` says not to ask questions at the end ("just write it down"), that standing instruction is the yes: say in one line that you're writing it down, then do it, without asking.
 
 **Never:**
 - send anything;
@@ -28,7 +28,7 @@ Read the "Starting and ending the day" section of `Me.md` first. It says what th
   1. Anything happen today that I didn't see?
   2. Anything on your mind for tomorrow or later?
 
-Run `python3 Scripts/tasks.py brief` for the lists. For each task under Waiting on others whose chase date has passed, ask in the same message: "Did you chase <who> about <what>?" If yes, run `python3 Scripts/tasks.py set "<task>" --chased --source wrap`, which moves the chase date a week on. If no, leave it.
+Run `python3 Scripts/tasks.py brief` for the lists. For each task under Waiting on others whose chase date is today or has passed, ask in the same message: "Did you chase <who> about <what>?" If yes, run `python3 Scripts/tasks.py set "<task>" --chased --source wrap`, which moves the chase date a week on. If no, leave it.
 
 Each answer becomes a task, a reminder, a line in a folder note, or nothing. Use the task-or-reminder test in `Tasks/Tasks.md`.
 
@@ -43,7 +43,7 @@ Each answer becomes a task, a reminder, a line in a folder note, or nothing. Use
 
 Skip this step if `Me.md` says to leave planning to the morning; the brief will do it.
 
-"Tomorrow" is the next working day. Run `python3 Scripts/tasks.py --today <tomorrow> brief` to see tomorrow's Today and Not planned yet.
+"Tomorrow" is the next working day. If what they say about tomorrow clashes with `Me.md` (a day that belongs to someone else, or more than their limit), ask before you propose the plan, and write nothing about tomorrow until they answer. Run `python3 Scripts/tasks.py --today <tomorrow> brief` to see tomorrow's Today and Not planned yet.
 
 - **Unfinished today:** if tasks planned for today or earlier are still open, offer "Carry everything unfinished to tomorrow" as one answer. On yes, run `python3 Scripts/tasks.py set "<task>" --when <tomorrow> --source wrap` for each one that isn't on hold. Their carry count survives, so tomorrow they read "Carried N days".
 - **Propose tomorrow** the way the brief does (`.claude/skills/brief/SKILL.md`, step 4): up to the day's limit from `Me.md`, deadlines first, then carried tasks, then high priority. Put the rest on one line, "Left for another day". Never plan a task that's on hold. If you plan fewer than the limit, say why in a few words ("Tuesday is lab meeting").
