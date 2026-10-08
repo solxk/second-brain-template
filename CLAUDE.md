@@ -12,7 +12,7 @@ Run the brief: `.claude/skills/brief/SKILL.md` (the owner can also type `/brief`
 
 ## On session end
 
-Run the wrap-up: `.claude/skills/wrap/SKILL.md` (or `/wrap`), when the owner asks for it ("wrap up", "what did we decide?"). "Done for today", "that's enough", "right, done" and the like are stops, not requests: name the wrap-up and offer it in one line, and run it on a yes; offer it too when a conversation is clearly finishing. It opens with what was decided, closes finished tasks, updates "Recently shifted", plans tomorrow if they want that, syncs, checks links, and commits if the folder is a git repo.
+Run the wrap-up: `.claude/skills/wrap/SKILL.md` (or `/wrap`), when the owner asks for it ("wrap up", "what did we decide?"). "Done for today", "that's enough", "right, done" and the like are stops, not requests: name the wrap-up and offer it in one line, and run it on a yes; offer it too when a conversation is clearly finishing. It opens with what was decided, closes finished tasks, updates "Recently shifted", plans tomorrow if they want that, syncs, checks links, and commits if the folder is a git repo. If the folder syncs between two computers, it ends by reminding the owner to let the sync finish before closing the lid.
 
 ## Write policy
 
@@ -39,5 +39,5 @@ Claude may create and edit anything in `Inbox/`, `Projects/`, `Areas/`, `Resourc
 - Every project and area folder has a folder note named after it, `Projects/Acme/Acme.md`, with `status: active | simmering | paused` and a `one-liner:` in its frontmatter. Its sections: What it is, Next actions (`![[Tasks.base#Here]]`), Recently shifted, Loose ends, Key links.
 - Plain markdown and wiki links. A fact lives in one place; other notes point at it. Every note Claude writes gets `created-by: claude` in its frontmatter. No new top-level folders without asking.
 - Explain anything technical in plain words: what it does for the owner first, the mechanism second. Keep messages to the owner short: one screen, never a wall, and at most three questions in one message.
-- Commands here say `python3`. Use whatever `vault.json` records as `"python"` (on Windows it's usually `python`).
+- Commands here say `python3`. Use the command `vault.json` records under `"python"` for this kind of computer (`darwin` or `windows`); if there is none, or it fails, find it again (`python3`, then `python`, then `py`) and record it there. A folder shared between two computers keeps one entry each.
 - Run the folder's scripts as plain commands from the folder root: no `cd`, `&&`, `;` or pipes. That's what keeps them pre-approved; anything chained asks the owner for permission.
