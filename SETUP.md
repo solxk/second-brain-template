@@ -42,7 +42,7 @@ How they work:
 Their brief and wrap-up (say first, in one line: "Each session starts with a short brief and ends with a wrap-up; three questions on how you'd like them"):
 8. When you open a session, I'll brief you: what's on today, where to start, anything due or waiting on you. What do you want in it, and how long should it be? (If they don't know, offer the default: one screen, with Start here, today's plan, reminders, the oldest decision waiting, and anything late from other people.)
 9. How much should one day hold? (Suggest two big focused jobs, two ordinary ones and a handful of quick ones, and let them change it. Ask whether they'd like the plan put on their calendar as blocks, or just listed.)
-10. When you're done for the day, I'll wrap up: write down what we decided, close what's finished, and plan tomorrow. Should I plan tomorrow then, or leave it to the morning? And is there anything you'd like me to ask you every time? (The default is two questions: "Anything happen today that I didn't see?" and "Anything on your mind for tomorrow?")
+10. When you're done for the day, I'll wrap up: write down what we decided, close what's finished, and plan tomorrow. Should I plan tomorrow then, or leave it to the morning? And is there anything you'd like me to ask you every time? (The default is two questions: "Anything happen today that I didn't see?" and "Anything on your mind for tomorrow?" If they name a question of their own, ask whether to keep the two defaults as well. If they want no questions, note that.)
 
 Logistics:
 11. Where do your calendar, email, tasks and reminders live today? (Google, Outlook, Apple, a notebook, nowhere.)
@@ -81,7 +81,7 @@ I'm <name>. <Two or three sentences on what they do, in words that will still be
 <Their answer. Direct or gentle. What to push on, what to leave alone. What assistants usually get wrong about them.>
 
 ## Starting and ending the day
-<In their words, first person, no tool names: what they want to hear at the start of a working session and how long it should be; how much a day should hold, and whether the plan goes on the calendar; whether the end of the day plans tomorrow, and what they want asked then. Fill in the defaults they accepted, so this section is never empty.>
+<In their words, first person, no tool names: what they want to hear at the start of a working session and how long it should be; how much a day should hold, and whether the plan goes on the calendar; whether the end of the day plans tomorrow, and what they want asked then, written out in full: the exact questions (with the two defaults written in if they're kept), or "no questions". Fill in the defaults they accepted, so this section is never empty.>
 
 ## Tools
 <Mac or Windows, phone, where calendar, email and reminders live.>

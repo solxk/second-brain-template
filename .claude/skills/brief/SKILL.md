@@ -9,6 +9,8 @@ The morning brief: one short message that makes the first thing to do need no de
 
 Read `Map.md`, then `Me.md` first. The "Starting and ending the day" section in `Me.md` says what the owner wants in the brief, how much a day should hold, and whether the plan goes on their calendar. Their words win over the defaults below. If they want it done differently, suggest the change to that section; edit `Me.md` only when they ask you to.
 
+**When `Me.md` scopes the brief** ("the first thing, and anything about Dad"; "whats due, who to ring, whats late. Thats it"), the brief is Start here plus exactly those, nothing added after their "that's it". Every other section waits until they ask. When it says how they read it ("on my phone"), keep it to eight lines.
+
 **Never:**
 - send anything;
 - close a task without the owner's yes;
@@ -63,7 +65,7 @@ The day's limit comes from `Me.md`. If it doesn't say, the limit is two deep, tw
   3. anything in progress;
   4. the high-priority ones from Not planned yet.
 
-  Put the rest on one line, "Left for another day". Give times only when a calendar is connected and `Me.md` says they want blocks. Deep work goes in the hours they said they're sharpest, medium and quick work after, around busy times.
+  Put the rest on one line, "Left for another day". Give clock-time blocks only when a calendar is connected and `Me.md` says they want them. Without that, label the plan with the parts of the day `Me.md` names ("morning", "9 to 1", "before football"). Deep work goes in the hours they said they're sharpest, medium and quick work after, around busy times.
 - **Decisions:** a decision in the plan gets no time slot.
 - **Start here:** the plan's first task, with the first thing to do as one concrete action ("open the contract and read clause 4", not "work on the contract").
 
@@ -103,5 +105,5 @@ To sort: <n> filed · Inbox: <n> to file · Untouched for two weeks: <n>
 <anything not read, and why>
 ```
 
-- **Decision waiting:** only the oldest open one, then the count of the rest. If they say yes, go through them one at a time: lay each out in two or three lines, ask for the call, and record it with `set`.
+- **Decision waiting:** only the oldest open one, then the count of the rest. Never name a second decision. If they say yes, go through them one at a time: lay each out in two or three lines, ask for the call, and record it with `set`.
 - **Untouched for two weeks:** a count only. The full list waits until they ask.

@@ -9,7 +9,7 @@ The end of a session or a day. Its job: everything decided is written down where
 
 Read the "Starting and ending the day" section of `Me.md` first. It says what the owner wants asked at the end, and whether to plan tomorrow now or leave it to the morning. Their words win over the defaults below. If they want it done differently, suggest the change to that section; edit `Me.md` only when they ask you to.
 
-**When they just stop** ("right, done", "that's enough for this morning"), don't wrap up silently. Name it and offer it in one line: "Shall I wrap up? I'll write down what we decided and plan tomorrow." Go on their yes. Offer it too when a conversation is clearly finishing.
+**When they just stop** ("right, done", "that's enough for this morning"), don't wrap up silently. Name it and offer it in one line: "Shall I wrap up? I'll write down what we decided and plan tomorrow." Go on their yes. Offer it too when a conversation is clearly finishing. If `Me.md` says not to ask questions at the end ("just write it down"), that standing instruction is the yes: say in one line that you're writing it down, then do it, without asking.
 
 **Never:**
 - send anything;
@@ -21,9 +21,12 @@ Read the "Starting and ending the day" section of `Me.md` first. It says what th
 
 ## 1. Check in
 
-Ask the questions `Me.md` lists. If it lists none, ask these two, in one message:
-1. Anything happen today that I didn't see?
-2. Anything on your mind for tomorrow or later?
+`Me.md` says which questions to ask at the end, in one of three ways. Follow it exactly:
+- **it lists questions:** ask exactly those, and the two defaults below only if it says to keep them as well;
+- **it says no questions:** ask nothing, not even the chase questions below; log anything they volunteer;
+- **it doesn't mention questions:** ask the two defaults, in one message:
+  1. Anything happen today that I didn't see?
+  2. Anything on your mind for tomorrow or later?
 
 Run `python3 Scripts/tasks.py brief` for the lists. For each task under Waiting on others whose chase date has passed, ask in the same message: "Did you chase <who> about <what>?" If yes, run `python3 Scripts/tasks.py set "<task>" --chased --source wrap`, which moves the chase date a week on. If no, leave it.
 
@@ -43,7 +46,7 @@ Skip this step if `Me.md` says to leave planning to the morning; the brief will 
 "Tomorrow" is the next working day. Run `python3 Scripts/tasks.py --today <tomorrow> brief` to see tomorrow's Today and Not planned yet.
 
 - **Unfinished today:** if tasks planned for today or earlier are still open, offer "Carry everything unfinished to tomorrow" as one answer. On yes, run `python3 Scripts/tasks.py set "<task>" --when <tomorrow> --source wrap` for each one that isn't on hold. Their carry count survives, so tomorrow they read "Carried N days".
-- **Propose tomorrow** the way the brief does (`.claude/skills/brief/SKILL.md`, step 4): up to the day's limit from `Me.md`, deadlines first, then carried tasks, then high priority. Put the rest on one line, "Left for another day". Never plan a task that's on hold.
+- **Propose tomorrow** the way the brief does (`.claude/skills/brief/SKILL.md`, step 4): up to the day's limit from `Me.md`, deadlines first, then carried tasks, then high priority. Put the rest on one line, "Left for another day". Never plan a task that's on hold. If you plan fewer than the limit, say why in a few words ("Tuesday is lab meeting").
 - **First thing:** name the first thing to do tomorrow as one concrete action.
 - **When they OK the plan:** run `python3 Scripts/tasks.py set "<task>" --when <tomorrow> --source wrap` for each task. Add calendar blocks only if they want them and a calendar is connected; check tomorrow's events first, so nothing is added twice.
 
@@ -58,7 +61,7 @@ Fix any broken links (links into `Archive/` are fine). If this folder is a git r
 
 ## 5. What they see
 
-The check-in questions (step 1) go first, in their own message. Then one short message, one screen, with empty sections left out. It starts with what was decided, not with what's next.
+The check-in questions (step 1) go first, in their own message. Then one short message, one screen, with empty sections left out. It always starts with **Decided**: the decisions they made today, in their words. A plan changed, a date moved or something put off ("the cleaning waits until January") counts as a decision. Then what moved, then tomorrow. Anything `Me.md` asks for at the end (a word count) goes after Decided, never first. If nothing was decided, say so in that section's one line rather than leaving it out.
 
 ```
 Wrap · <Weekday d Month>
