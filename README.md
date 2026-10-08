@@ -72,7 +72,7 @@ It comes in four styles. During setup Claude shows you your own board in each on
 
 | | |
 |---|---|
-| **Show Your Working**: engineering paper, graphite ink, one red-orange for whatever needs you. | **Warm Bento**: cream cards on taupe, an espresso card for what's in focus, orange for act now. |
+| **Show Your Working**: engineering paper, graphite ink, one red-orange for whatever needs you. Light or dark, following your computer, or pick one in the corner. | **Warm Bento**: cream cards on taupe, an espresso card for what's in focus, orange for act now. |
 | ![Show Your Working](Scripts/board_styles/previews/working.jpg) | ![Warm Bento](Scripts/board_styles/previews/bento.jpg) |
 | **Aura**: frosted glass on periwinkle, a gradient arc that fills with the day, mint for done. | **Oracle**: a dark command centre with a morning briefing; blue for what Claude tells you, orange for what needs you. |
 | ![Aura](Scripts/board_styles/previews/aura.jpg) | ![Oracle](Scripts/board_styles/previews/oracle.jpg) |

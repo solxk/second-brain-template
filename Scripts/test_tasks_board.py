@@ -367,6 +367,35 @@ class Styles(unittest.TestCase):
         for name, meta in raw["styles"].items():
             self.assertTrue((B.STYLES_DIR / f"{name}.css").is_file(), name)
             self.assertTrue(meta.get("label") and meta.get("blurb"), name)
+            if meta.get("dark"):                              # a style that offers dark has a dark palette
+                self.assertIn(':root[data-theme="dark"]', (B.STYLES_DIR / f"{name}.css").read_text(), name)
+
+    def test_light_or_dark_is_set_before_the_first_paint(self):
+        html = B.page("working")
+        head = html.split("</head>", 1)[0]
+        options = head.index("window.BOARD_STYLE = {")
+        theme = head.index('localStorage.getItem("board-theme")')
+        self.assertLess(options, theme)                       # the head script reads the style's options, so it comes after them
+        self.assertIn('"dark": true', head)
+
+    def test_the_switch_shows_only_for_a_style_with_dark(self):
+        for name, meta in B.styles()["styles"].items():
+            html = B.page(name)
+            self.assertIn('<div class="themes" id="themes" role="group" aria-label="Light or dark" hidden>', html)   # the script unhides it
+            self.assertEqual('"dark": true' in html.split("</head>", 1)[0], bool(meta.get("dark")), name)
+        self.assertIn("if (STYLE.dark) {", B.page("bento"))
+
+    def test_storage_is_always_guarded(self):
+        # localStorage throws in some private windows and file previews; an unguarded call would stop the board loading
+        tmp = Path(tempfile.mkdtemp())
+        make(tmp, "Something")
+        with mock.patch.object(T, "_config", return_value={"board_style": "working"}):
+            snapshot = B.export_snapshot(tmp, date(2026, 10, 6), out=tmp / "Board.html")[0].read_text()
+        for html in (B.page("working"), snapshot):
+            lines = [x for x in html.splitlines() if "localStorage" in x]
+            self.assertTrue(lines)
+            for line in lines:
+                self.assertIn("try {", line)
 
     def test_page_carries_the_chosen_style(self):
         with mock.patch.object(T, "_config", return_value={}):

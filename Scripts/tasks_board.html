@@ -28,7 +28,7 @@
   h1, h2, h3 { margin:0; text-wrap:balance; }
   .label, .dateline { margin:0; font-family:var(--font-label); font-size:var(--label-size); font-weight:600; text-transform:var(--label-case); letter-spacing:var(--label-track); color:var(--muted); }
 
-  .app { max-width:var(--max); margin:0 auto; padding:24px 20px 96px; display:flex; flex-direction:column; gap:var(--gap); }
+  .app { position:relative; max-width:var(--max); margin:0 auto; padding:24px 20px 96px; display:flex; flex-direction:column; gap:var(--gap); }
   .card { min-width:0; padding:var(--pad); background:var(--card); border:var(--card-border); border-radius:var(--r-card); box-shadow:var(--card-shadow); }
 
   .top { display:flex; flex-wrap:wrap; align-items:center; gap:12px 20px; }
@@ -43,6 +43,11 @@
   #tabs button:hover { color:var(--ink); }
   #tabs button.on { background:var(--accent); color:var(--on-accent); }
   #tabs .n { font-family:var(--font-label); font-size:12px; opacity:.85; }
+  .themes { position:absolute; top:14px; right:14px; z-index:5; display:flex; padding:2px; gap:2px; border:1px solid var(--line); border-radius:var(--r-ctl); background:var(--card); }
+  .themes button { min-height:28px; padding:0 9px; border:0; border-radius:calc(var(--r-ctl) - 1px); background:none; color:var(--muted);
+                   font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; cursor:pointer; }
+  .themes button:hover { color:var(--ink); }
+  .themes button[aria-pressed=true] { background:var(--accent); color:var(--on-accent); }
   .stamp { font-size:14px; color:var(--muted); white-space:nowrap; }
   .motto { display:none; margin:0; }
   .banner { padding:10px 14px; border-radius:var(--r-row); background:var(--signal-wash); color:var(--signal-ink); font-size:14px; font-weight:500; }
@@ -115,7 +120,13 @@
   .notice { margin:20px 0 0; padding:12px 14px; border-radius:var(--r-row); background:var(--signal-wash); color:var(--signal-ink); font-size:14px; }
 
   .folders { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:16px; align-items:start; margin-top:16px; }
-  .folder { min-width:0; padding:4px 14px 10px; border-radius:var(--r-row); background:var(--card-2); }
+  .folder { min-width:0; padding:4px 14px 10px; border-radius:var(--r-row); background:var(--card-2); container-type:inline-size; }
+  @container (max-width: 520px) {      /* a narrow folder: the date drops under the title, as on a phone, so the title keeps the width */
+    .task { grid-template-columns:22px minmax(0, 1fr); row-gap:4px; }
+    .task.numbered { grid-template-columns:26px 22px minmax(0, 1fr); }
+    .task .when { grid-column:2; padding-top:0; white-space:normal; }
+    .task.numbered .when { grid-column:3; }
+  }
   .folder > header { display:flex; justify-content:space-between; align-items:baseline; gap:12px; padding:14px 6px 10px; border-bottom:1px solid var(--line); }
   .folder h3 { font-family:var(--font-display); font-weight:var(--display-weight); text-transform:var(--display-case); font-size:20px; overflow-wrap:anywhere; }
   .count { font-family:var(--font-label); font-size:12px; color:var(--muted); white-space:nowrap; }
@@ -130,7 +141,7 @@
   .later summary { display:flex; align-items:center; gap:10px; padding:14px 6px 6px; cursor:pointer; font-weight:600; color:var(--muted); }
   .later summary:hover { color:var(--ink); }
   .later > .explain { padding:0 6px 6px; font-size:14px; }
-  .chip.wait { border-style:dashed; color:var(--ink); }
+  .chip.wait { display:inline-block; max-width:100%; overflow:hidden; text-overflow:ellipsis; line-height:18px; border-style:dashed; color:var(--ink); }   /* a long blocker's title is cut; the panel names it in full */
   .watch { margin-top:22px; }
   .watch > .label { padding:10px 0 4px; }
   .rel { margin-top:22px; display:grid; gap:6px; }
@@ -162,9 +173,6 @@
   .rem.late > :first-child { color:var(--signal); }
   .rem > :last-child { font-weight:500; }
   .side .none { margin:0; font-size:14px; color:var(--muted); }
-  .decision { display:grid; gap:4px; padding:4px 0 12px; }
-  .decision > :first-child { font-size:17px; font-weight:600; }
-  .decision small { font-size:13px; color:var(--muted); }
   .fold { display:grid; gap:6px; width:100%; padding:10px 0; border:0; border-bottom:1px solid var(--line); background:none; text-align:left; cursor:pointer; }
   .fold .row { display:flex; justify-content:space-between; gap:12px; font-weight:600; }
   .fold .row span:last-child { font-family:var(--font-label); font-size:12px; font-weight:600; color:var(--muted); }
@@ -222,9 +230,14 @@
   @media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
 </style>
 <!--BOARD_STYLE-->
+<script>/* light or dark before the first paint: the owner's pick on this device, else the computer's setting; only for a style with a dark palette */
+(function () { var c = null; try { c = localStorage.getItem("board-theme"); } catch (e) {}
+  var dark = (window.BOARD_STYLE || {}).dark && (c === "dark" || (c !== "light" && matchMedia("(prefers-color-scheme: dark)").matches));
+  document.documentElement.dataset.theme = dark ? "dark" : "light"; })();</script>
 </head>
 <body>
 <div class="app" id="app">
+  <div class="themes" id="themes" role="group" aria-label="Light or dark" hidden><button type="button" data-theme="auto" title="Match the computer's setting">Auto</button><button type="button" data-theme="light">Light</button><button type="button" data-theme="dark">Dark</button></div>
   <header class="top">
     <div class="brand"><span class="mark" aria-hidden="true"></span><span class="name" id="vault">Tasks</span><small>Tasks</small></div>
     <nav id="tabs" aria-label="Lists"></nav>
@@ -268,6 +281,24 @@
 /*BOARD_DATA*/
 const LIVE = !window.BOARD_DATA;
 const STYLE = Object.assign({name:"plain", gauge:"", week:false, side:false, numbered:false, arc:["#8F94F0","#F2A0C0","#F4D776","#9EF0C8"]}, window.BOARD_STYLE || {});
+const darkQuery = matchMedia("(prefers-color-scheme: dark)");
+function themeChoice() { try { return localStorage.getItem("board-theme") || "auto"; } catch (e) { return "auto"; } }
+function applyTheme() {   // "auto" follows the computer and changes with it; Light or Dark sticks on this device
+  const c = themeChoice();
+  document.documentElement.dataset.theme = STYLE.dark && (c === "dark" || (c === "auto" && darkQuery.matches)) ? "dark" : "light";
+  for (const b of document.querySelectorAll("#themes button")) b.setAttribute("aria-pressed", String(b.dataset.theme === c));
+}
+if (STYLE.dark) {
+  const box = document.getElementById("themes");
+  box.hidden = false;
+  box.addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    try { b.dataset.theme === "auto" ? localStorage.removeItem("board-theme") : localStorage.setItem("board-theme", b.dataset.theme); } catch (err) {}
+    applyTheme();
+  });
+  darkQuery.addEventListener("change", applyTheme);
+  applyTheme();
+}
 const VIEWS = [["today","Today"],["reminders","Reminders"],["board","By project"],["waiting","Waiting on others"],["onhold","On hold"],["claude","Claude"],["inbox","To sort"],["someday","Someday"],["done","Done"]];
 const HEADS = {        // what each list is, in a line, for someone opening the board for the first time
   today: ["Today", "Planned for today, deadlines due or late, and anything in progress. Start at the top."],

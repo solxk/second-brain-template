@@ -1,23 +1,37 @@
 /* Show Your Working: engineering paper, graphite ink, white sheets with hard shadows. The accent marks what needs you.
-   Desktop: a list rail on the left, then the date, the callout, the scratch pad and the numbered list. */
+   Desktop: a list rail on the left, then the date, the callout, the scratch pad and the numbered list, up to 1280px wide.
+   Dark ("night shift"): the same sheet under a desk lamp, green-graphite paper, chalk ink, the same red-orange.
+   --edge is the ink line around sheets and controls, --hard their offset shadow, --grid the paper's ruling. */
 :root {
   --page-bg:#F1F5EC; --card:#FFFFFF; --card-2:#F1F5EC; --ink:#24282B; --muted:#565D62; --line:#C9D6BE;
   --accent:#24282B; --on-accent:#FFFFFF; --signal:#C73E0E; --signal-wash:#FBE7DF; --signal-ink:#A3330A;
   --cell-open:#24282B; --cell-done:#C9D6BE; --gauge-on:var(--signal);
+  --edge:#24282B; --hard:#24282B; --grid:#DCE6D2; --rail:#FAFCF7;
+  --tick:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-7' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   --font-body:"Atkinson Hyperlegible Next", "Atkinson Hyperlegible", system-ui, sans-serif;
   --font-display:var(--font-body); --font-label:"Atkinson Hyperlegible Mono", ui-monospace, Menlo, monospace;
   --display-weight:800; --display-track:-0.03em; --label-track:.05em; --label-size:11px;
   --r-card:4px; --r-row:4px; --r-ctl:4px; --r-check:3px;
-  --card-border:1.5px solid #24282B; --card-shadow:4px 4px 0 #24282B; --pad:20px;
+  --card-border:1.5px solid var(--edge); --card-shadow:4px 4px 0 var(--hard); --pad:20px;
 }
-body { background-image:linear-gradient(#DCE6D2 1px, transparent 1px), linear-gradient(90deg, #DCE6D2 1px, transparent 1px); background-size:16px 16px; }
+:root[data-theme="dark"] {
+  --page-bg:#121815; --card:#1A211D; --card-2:#151C18; --ink:#E6ECDD; --muted:#A3AE9F; --line:#2F3B33;
+  --accent:#E6ECDD; --on-accent:#121815; --signal:#FF7A4A; --signal-wash:#3A2118; --signal-ink:#FFB08E;
+  --cell-open:#E6ECDD; --cell-done:#3A473E;
+  --edge:#8A9787; --hard:#060807; --grid:#19211C; --rail:#151C18;
+  --scrim:rgba(0,0,0,.6); --toast:#E6ECDD; --on-toast:#121815;
+  --tick:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-7' fill='none' stroke='%23121815' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  color-scheme:dark;
+}
+body { background-image:linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px); background-size:16px 16px; }
+.task input[type=checkbox]:checked { background-image:var(--tick); }
 
-.top { background:#FAFCF7; border-bottom:1.5px solid var(--ink); margin:-14px -14px 0; padding:12px 14px; }
+.top { background:var(--rail); border-bottom:1.5px solid var(--edge); margin:-14px -14px 0; padding:12px 14px; }
 .brand { flex-direction:column; align-items:flex-start; gap:6px; }
 .brand .name { font-size:20px; letter-spacing:-0.03em; line-height:1; }
 .brand .name::after { content:""; display:block; width:40px; height:4px; margin-top:6px; background:var(--signal); }
 .brand small { display:none; }
-#tabs button.on { background:var(--card); color:var(--ink); border:1.5px solid var(--ink); box-shadow:3px 3px 0 var(--ink); font-weight:800; }
+#tabs button.on { background:var(--card); color:var(--ink); border:1.5px solid var(--edge); box-shadow:3px 3px 0 var(--hard); font-weight:800; }
 #tabs button.on .n { color:var(--signal); }
 .motto { font-weight:700; font-size:15px; line-height:1.35; }
 .motto span { color:var(--signal); }
@@ -32,31 +46,36 @@ body { background-image:linear-gradient(#DCE6D2 1px, transparent 1px), linear-gr
 #dump:focus { outline:none; }
 .capture:focus-within { outline:2px solid var(--signal); outline-offset:3px; }
 
-.viewhead { border-bottom:1.5px solid var(--ink); }
+.viewhead { border-bottom:1.5px solid var(--edge); }
 #vtitle { font-size:clamp(44px, 6vw, 72px); line-height:.95; letter-spacing:-0.04em; }
-.filters select { border:1.5px solid var(--ink); }
+.filters select { border:1.5px solid var(--edge); }
 .task .t > :first-child { font-weight:700; }
 .chip { border-color:var(--line); background:var(--card); font-family:var(--font-label); font-size:11px; text-transform:uppercase; letter-spacing:.04em; border-radius:3px; }
 .chip.decision { border:1.5px solid var(--signal); background:var(--card); color:var(--signal); }
 .task.w-late .no { color:var(--signal); font-weight:600; }
-.folder { background:var(--card); border:1.5px solid var(--ink); }
+.folder { background:var(--card); border:1.5px solid var(--edge); }
 .seg button[aria-pressed=true] { box-shadow:2px 2px 0 var(--signal); }
 .btn.primary { box-shadow:3px 3px 0 var(--signal); }
-#panel { border-left:1.5px solid var(--ink); }
+#panel { border-left:1.5px solid var(--edge); }
+.themes { border:1.5px solid var(--edge); background:var(--card); box-shadow:2px 2px 0 var(--hard); }
+.themes button { font-family:var(--font-label); }
 
 @media (min-width: 761px) {
   .app { max-width:none; margin:0; padding:0; min-height:100vh; display:grid; gap:0; align-items:start;
          grid-template-columns:236px minmax(0, 1fr); grid-template-rows:auto auto auto 1fr;
          grid-template-areas:"top banner" "top hero" "top capture" "top list"; }
   .top { grid-area:top; position:sticky; top:0; height:100vh; margin:0; padding:32px 20px; flex-direction:column; flex-wrap:nowrap;
-         align-items:stretch; gap:28px; border-bottom:0; border-right:1.5px solid var(--ink); align-self:stretch; }
+         align-items:stretch; gap:28px; border-bottom:0; border-right:1.5px solid var(--edge); align-self:stretch; }
   .brand .name { font-size:26px; }
   #tabs { flex-direction:column; flex:0 0 auto; overflow:visible; gap:4px; }
   #tabs button { justify-content:space-between; width:100%; border:1.5px solid transparent; color:var(--ink); font-size:15px; }
   .stamp { display:none; }
   .motto { display:block; margin-top:auto; }
-  .banner { grid-area:banner; margin:24px 48px 0; max-width:920px; }
-  .hero { grid-area:hero; margin:40px 48px 0; max-width:920px; }
-  .capture { grid-area:capture; margin:22px 48px 0; max-width:920px; }
-  .listcard { grid-area:list; margin:28px 48px 64px; max-width:920px; }
+  .banner, .hero, .capture, .listcard { justify-self:center; width:min(1280px, 100% - 96px); }   /* grows with the window up to 1280px, centred beside the rail */
+  .banner { grid-area:banner; margin-top:72px; }          /* the read-only copy's banner sits under the light/dark switch */
+  .hero { grid-area:hero; margin-top:40px; }
+  .capture { grid-area:capture; margin-top:22px; }
+  .listcard { grid-area:list; margin:28px 0 64px; }
+  .folders { grid-template-columns:repeat(auto-fit, minmax(360px, 1fr)); }   /* numbered rows need the room: two folders across at 1280px, three when wider */
+  .themes { top:24px; right:max(48px, (100% - 1516px) / 2); }   /* lined up with the content's right edge: the 236px rail plus 1280px */
 }

@@ -3,9 +3,10 @@
   "styles": {
     "working": {
       "label": "Show Your Working",
-      "blurb": "Engineering paper, graphite ink, one red-orange for whatever needs you. Numbered lists, easy to read.",
+      "blurb": "Engineering paper, graphite ink, one red-orange for whatever needs you. Numbered lists, easy to read. Light and dark, matching the computer.",
       "fonts": "https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;500;700;800&family=Atkinson+Hyperlegible+Mono:wght@400;500;600&display=swap",
-      "numbered": true
+      "numbered": true,
+      "dark": true
     },
     "bento": {
       "label": "Warm Bento",
