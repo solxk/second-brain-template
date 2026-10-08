@@ -103,3 +103,7 @@ It's a folder, so back it up the way you back up anything else. If it lives in i
 ## Made by
 
 Sol Khan, from the folder he runs his own businesses out of. Claude Code only for now.
+
+## License
+
+MIT: use it, change it, share it, keep the copyright line. See [LICENSE](LICENSE). Your own notes are yours; the license only covers the template.
