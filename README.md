@@ -26,7 +26,7 @@ Claude reads `SETUP.md`, interviews you, and builds the folder around your answe
 
 The first time you open the folder, Claude Code asks whether you trust it. Say yes: that's what switches on the folder's settings. After that, Claude still asks before it runs things on your computer. The folder's own scripts are pre-approved, so most of what it asks during setup is a one-off, and it's fine to say yes. If setup gets interrupted, open the folder again and say "carry on": it picks up where it stopped.
 
-After that, everything is a conversation: "what's on today?", "file this", "remind me to call the bank on Friday", "what did we decide?".
+After that, everything is a conversation: "what's on today?", "file this", "remind me to call the bank on Friday", "what did we decide?". Each session starts with a short brief (`/brief`) and ends with a wrap-up (`/wrap`); setup asks what you want in both.
 
 ## How it's organised
 

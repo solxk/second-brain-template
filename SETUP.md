@@ -39,12 +39,17 @@ How they work:
 6. What do you want from an AI partner: pushing you, keeping you organised, thinking things through with you, doing the admin?
 7. Should it be direct with you, or gentle?
 
+Their brief and wrap-up (say first, in one line: "Each session starts with a short brief and ends with a wrap-up; three questions on how you'd like them"):
+8. When you open a session, I'll brief you: what's on today, where to start, anything due or waiting on you. What do you want in it, and how long should it be? (If they don't know, offer the default: one screen, with Start here, today's plan, reminders, the oldest decision waiting, and anything late from other people.)
+9. How much should one day hold? (Suggest two big focused jobs, two ordinary ones and a handful of quick ones, and let them change it. Ask whether they'd like the plan put on their calendar as blocks, or just listed.)
+10. When you're done for the day, I'll wrap up: write down what we decided, close what's finished, and plan tomorrow. Should I plan tomorrow then, or leave it to the morning? And is there anything you'd like me to ask you every time? (The default is two questions: "Anything happen today that I didn't see?" and "Anything on your mind for tomorrow?")
+
 Logistics:
-8. Where do your calendar, email, tasks and reminders live today? (Google, Outlook, Apple, a notebook, nowhere.)
-9. Mac or Windows? Which phone?
+11. Where do your calendar, email, tasks and reminders live today? (Google, Outlook, Apple, a notebook, nowhere.)
+12. Mac or Windows? Which phone?
 
 Close:
-10. Anything about you that an assistant usually gets wrong?
+13. Anything about you that an assistant usually gets wrong?
 
 Something with a finish line ("sell the flat", "launch the shop") isn't a folder. It belongs inside the project or area it's part of, and becomes a goal or a task later.
 
@@ -74,6 +79,9 @@ I'm <name>. <Two or three sentences on what they do, in words that will still be
 
 ## What I want from an AI partner
 <Their answer. Direct or gentle. What to push on, what to leave alone. What assistants usually get wrong about them.>
+
+## Starting and ending the day
+<In their words, first person, no tool names: what they want to hear at the start of a working session and how long it should be; how much a day should hold, and whether the plan goes on the calendar; whether the end of the day plans tomorrow, and what they want asked then. Fill in the defaults they accepted, so this section is never empty.>
 
 ## Tools
 <Mac or Windows, phone, where calendar, email and reminders live.>
@@ -153,9 +161,9 @@ Then add two reminders of your own, and tell them why:
    Say that it runs while this session is open, and that "open the board" in any session brings it back.
 
    Then let them choose how it looks. Give them http://127.0.0.1:8765/styles: it shows their own board in each of the four styles, on a computer and on a phone. When they pick one, run `python3 Scripts/tasks_board.py style <name>` and ask them to reload the board. Show Your Working is already set, so if they don't mind, move on. Tell them they can change it any time by asking.
-3. Explain the two rituals in plain words:
-   - At the start of a session, Claude briefs them.
-   - At the end, they say "what did we decide?" or "wrap up", and Claude writes down what changed and what's next. When they just stop ("right, done", "that's enough for this morning"), Claude names the wrap-up and offers it in one line before doing it, and ends with the decisions made, not only the next steps.
+3. Explain the two rituals in plain words. They're the `/brief` and `/wrap` skills in `.claude/skills/`, and they follow "Starting and ending the day" in `Me.md`:
+   - At the start of a session, Claude briefs them (or they type `/brief`, or ask "what's on today?").
+   - At the end, they say "what did we decide?", "wrap up" or `/wrap`, and Claude writes down what changed and what's next. When they just stop ("right, done", "that's enough for this morning"), Claude names the wrap-up and offers it in one line before doing it, and ends with the decisions made, not only the next steps.
 
    They never file anything themselves.
 4. Read this folder's path yourself, and tell them in one line what it's in: iCloud Drive, OneDrive, Dropbox, Google Drive, or none of them. Don't ask them; if they don't know, the path does. Then explain the phone:

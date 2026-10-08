@@ -8,21 +8,11 @@ Until `vault.json` says `"setup": "done"`, this folder isn't set up. Read `SETUP
 
 ## On arrival
 
-1. Read `Map.md`, then `Me.md`.
-2. Run `python3 Scripts/tasks.py sync`, then `python3 Scripts/tasks.py brief`.
-3. If Google Calendar is connected, read today's and tomorrow's events. If Google Tasks is connected, read its **Phone** list: each item becomes a task, a reminder or a To watch entry, then is ticked off there.
-4. Check `Inbox/`, and the "Recently shifted" section of each folder note the brief mentions.
-5. Open with a short briefing: today's events, Today from the brief (start with its "Start here" task), reminders due, anything not planned yet, decisions waiting, things waiting on others past their chase date, things to sort, anything untouched for two weeks.
+Run the brief: `.claude/skills/brief/SKILL.md` (the owner can also type `/brief`). It reads `Map.md` and `Me.md`, syncs the tasks, reads the calendar and the phone list if they're connected, and opens with a short briefing shaped by "Starting and ending the day" in `Me.md`.
 
 ## On session end
 
-Run this when the owner says "what did we decide?", "wrap up", "done for today" or similar, and offer to when a conversation is clearly finishing.
-
-1. Re-read each folder note this session touched and fix anything the session made untrue.
-2. Add what was decided and what's next under "Recently shifted", newest first. Keep eight lines there; move older ones to a "History" section at the bottom of the note.
-3. Update the task notes you touched, then run `python3 Scripts/tasks.py sync`.
-4. Run `python3 Scripts/check_wiki_links.py` and fix any broken links. Links into `Archive/` are fine.
-5. If this folder is a git repo, commit: `git add -A && git commit -m "<what changed>"`.
+Run the wrap-up: `.claude/skills/wrap/SKILL.md` (or `/wrap`), when the owner says "what did we decide?", "wrap up", "done for today" or similar. When they just stop ("right, done"), name it and offer it in one line first; offer it too when a conversation is clearly finishing. It writes down what was decided, closes finished tasks, updates "Recently shifted", plans tomorrow if they want that, syncs, checks links, and commits if the folder is a git repo.
 
 ## Write policy
 

@@ -25,6 +25,7 @@ Curated by hand. Update when the structure changes, not on a schedule.
 | `Tasks/` | One note per task, goal or reminder. `Tasks.md` explains them; `Tasks.base` holds the Obsidian views; `Board.html`, the phone snapshot, appears after the first sync. |
 | `Tasks/Archive/` | Finished tasks, a week after they're done, and dropped ones straight away. Kept, never deleted. |
 | `Archive/` | Finished or dead. |
+| `.claude/skills/` | `brief` (the start of a session) and `wrap` (the end). Both follow "Starting and ending the day" in `Me.md`. |
 | `Scripts/` | `tasks.py` (add, set, sync, brief, list), `tasks_board.py` (the board, serve, export and style), `board_styles/` (its four looks), `check_wiki_links.py`, and their tests. |
 
 ## Projects and areas
