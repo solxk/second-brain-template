@@ -43,7 +43,7 @@ body { background-attachment:fixed; }
 .chip.decision, .chip.goal { background:#EEF0FD; color:#4A4EC4; }
 .folder { background:rgba(255,255,255,.6); border:1.5px solid #FFFFFF; }
 
-.side-reminders, .side-decisions { background:#FFFFFF; }
+.side-reminders, .side-waiting { background:#FFFFFF; }
 .rem { grid-template-columns:74px minmax(0, 1fr); border-bottom:0; padding:8px 0 8px 16px; border-left:4px solid; border-image:linear-gradient(#8F94F0, #9EF0C8) 1; }
 .rem.late > :first-child { color:var(--signal-ink); }
 .side h3 small { padding:3px 10px; border-radius:8px; background:#DDF8EA; color:#137A4D; }

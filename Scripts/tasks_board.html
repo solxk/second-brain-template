@@ -122,6 +122,21 @@
   .project { display:flex; align-items:center; gap:8px; min-height:46px; padding:8px 6px; border-bottom:1px solid var(--line); cursor:pointer; }
   .project .t { flex:1; }
   .project .chev { display:grid; place-items:center; width:22px; color:var(--muted); }
+  .project input[type=checkbox] { appearance:none; -webkit-appearance:none; flex:none; width:20px; height:20px; margin:0; border:2px solid var(--ink);
+                                  border-radius:var(--r-check); background:var(--card); cursor:pointer; }
+  .start { display:inline-block; margin-right:8px; padding:1px 8px; border-radius:999px; background:var(--accent); color:var(--on-accent);
+           font-family:var(--font-label); font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; vertical-align:2px; }
+  .later { margin-top:18px; border-top:1px solid var(--line); }
+  .later summary { display:flex; align-items:center; gap:10px; padding:14px 6px 6px; cursor:pointer; font-weight:600; color:var(--muted); }
+  .later summary:hover { color:var(--ink); }
+  .later > .explain { padding:0 6px 6px; font-size:14px; }
+  .chip.wait { border-style:dashed; color:var(--ink); }
+  .watch { margin-top:22px; }
+  .watch > .label { padding:10px 0 4px; }
+  .rel { margin-top:22px; display:grid; gap:6px; }
+  .rel-item { display:flex; justify-content:space-between; gap:12px; padding:10px 12px; border:1px solid var(--line); border-radius:var(--r-row);
+              background:var(--card); text-align:left; cursor:pointer; }
+  .rel-item span:last-child { font-family:var(--font-label); font-size:12px; color:var(--muted); }
   .project.closed .chev svg { transform:rotate(-90deg); }
 
   .gaugecard { display:grid; justify-items:center; align-content:center; gap:10px; }
@@ -242,7 +257,7 @@
   </section>
   <aside class="side" id="side" hidden>
     <section class="card side-reminders" id="sideReminders"></section>
-    <section class="card side-decisions" id="sideDecisions"></section>
+    <section class="card side-waiting" id="sideWaiting"></section>
     <section class="card side-folders" id="sideFolders"></section>
   </aside>
 </div>
@@ -253,36 +268,40 @@
 /*BOARD_DATA*/
 const LIVE = !window.BOARD_DATA;
 const STYLE = Object.assign({name:"plain", gauge:"", week:false, side:false, numbered:false, arc:["#8F94F0","#F2A0C0","#F4D776","#9EF0C8"]}, window.BOARD_STYLE || {});
-const VIEWS = [["today","Today"],["reminders","Reminders"],["board","Board"],["decisions","Decisions"],["waiting","Waiting on others"],["inbox","To sort"],["someday","Someday"],["done","Done"]];
+const VIEWS = [["today","Today"],["reminders","Reminders"],["board","By project"],["waiting","Waiting on others"],["onhold","On hold"],["claude","Claude"],["inbox","To sort"],["someday","Someday"],["done","Done"]];
 const HEADS = {        // what each list is, in a line, for someone opening the board for the first time
-  today: ["Today", "Overdue, due within a week, in progress, or high priority. Goals and reminders stay out of here."],
-  reminders: ["Reminders", "Nudges on a date. The morning brief starts showing each one two days before."],
-  board: ["Everything open", "Every open task by project and area, with goals and the tasks under them."],
-  decisions: ["Decisions", "Yes-or-no calls that are yours to make, oldest first."],
-  waiting: ["Waiting on others", "Tasks where the next move is someone else's, and yours that are blocked."],
+  today: ["Today", "Planned for today, deadlines due or late, and anything in progress. Start at the top."],
+  reminders: ["Reminders", "Nudges on a day. Each stays until you tick it; the morning brief shows it two days ahead."],
+  board: ["By project", "Every open task by project and area, with goals and the tasks under them."],
+  waiting: ["Waiting on others", "Waiting on someone outside: a person, a company. The latest chase comes first."],
+  onhold: ["On hold", "Your tasks held up by another task. Each row says which one."],
+  claude: ["Claude's tasks", "Things Claude runs for you. High priority first, then deadline."],
   inbox: ["To sort", "Unfiled. Claude sorts these into the right project or area at the start of the next session."],
   someday: ["Someday", "Parked. Off every list until you bring one back."],
-  done: ["Done", "Finished, newest first."],
+  done: ["Done", "Finished, newest first. They move to the archive a week after."],
 };
 const EMPTY = {
-  today: "Nothing due or urgent. Everything else is on the Board.", reminders: "No reminders. Tell Claude what to remind you about, and when.",
-  board: "No open tasks.", decisions: "No decisions waiting on you.", waiting: "Nothing is waiting on anyone else.",
-  inbox: "Nothing to sort. Type into the brain dump to add something.", someday: "Nothing parked.", done: "Nothing finished yet.",
+  today: "Nothing planned for today. Give a task a planned day, or ask Claude to plan the day.",
+  reminders: "No reminders. Tell Claude what to remind you about, and when.",
+  board: "No open tasks.", waiting: "Nothing is waiting on anyone else.", onhold: "Nothing is on hold.",
+  claude: "Nothing for Claude.", inbox: "Nothing to sort. Type into the brain dump to add something.",
+  someday: "Nothing parked.", done: "Nothing finished yet.",
 };
-const STATUS_NAMES = {inbox:"To sort", todo:"To do", doing:"In progress", blocked:"Blocked", someday:"Someday", done:"Done", dropped:"Dropped"};
+const STATUS_NAMES = {inbox:"To sort", todo:"To do", doing:"Doing", blocked:"On hold", someday:"Someday", done:"Done", dropped:"Dropped"};
+const EFFORT_NAMES = {deep:"Deep", medium:"Medium", easy:"Quick"};
 const OPEN = ["todo", "doing", "blocked"];
-const S = { data:null, view:"today", filters:{folder:"",effort:"",owner:"",priority:""}, open:null, collapsed:new Set() };
+const S = { data:null, view:"today", filters:{folder:"",effort:"",owner:"",priority:""}, open:null, collapsed:new Set(), later:false };
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const cap = s => s ? s[0].toUpperCase() + s.slice(1) : "";
-const day = s => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+const day = s => { const [y, m, d] = String(s).slice(0, 10).split("-").map(Number); return new Date(y, m - 1, d); };
 const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+const days = n => plural(n, "day", "days");
 const obs = file => `obsidian://open?vault=${encodeURIComponent(S.data.vault)}&file=${encodeURIComponent(file)}`;
 const STATUS_KEY = "task-status";
 const CHEV = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 5.5L7 9l3.5-3.5"/></svg>`;
 
-function toast(msg) { const t = $("#toast"); t.textContent = msg; t.style.display = "block"; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = "none", 2500); }
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.style.display = "block"; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = "none", 3500); }
 
 async function load() {
   if (!LIVE) { S.data = window.BOARD_DATA; render(); return; }
@@ -298,40 +317,62 @@ function passes(t) {
       && (!f.owner || t.owner === f.owner) && (!f.priority || t.priority === f.priority);
 }
 
-function whenText(t, short) {         // the due date in words: "Overdue · 5 Oct", "Today", "Friday"
-  if (!t.due) return ["", ""];
-  const today = day(S.data.today), d = day(t.due), diff = Math.round((d - today) / 864e5);
-  const date = d.toLocaleDateString(undefined, {day:"numeric", month:"short", ...(d.getFullYear() !== today.getFullYear() ? {year:"numeric"} : {})});
-  if (["done", "dropped"].includes(t[STATUS_KEY])) return [date, ""];
-  if (diff < 0) return [short ? "Overdue" : `Overdue · ${date}`, "late"];
-  if (diff === 0) return ["Today", "soon"];
-  if (diff === 1) return ["Tomorrow", ""];
-  if (diff < 7) return [d.toLocaleDateString(undefined, {weekday: short ? "short" : "long"}), ""];
-  return [date, ""];
+function dateText(s, short) {      // "Today", "Tomorrow", "Friday", "12 Oct"
+  const today = day(S.data.today), d = day(s), diff = Math.round((d - today) / 864e5);
+  if (diff === 0) return "today";
+  if (diff === 1) return "tomorrow";
+  if (diff > 1 && diff < 7) return d.toLocaleDateString(undefined, {weekday: short ? "short" : "long"});
+  return d.toLocaleDateString(undefined, {day:"numeric", month:"short", ...(d.getFullYear() !== today.getFullYear() ? {year:"numeric"} : {})});
 }
-function when(t) { const [text, cls] = whenText(t); return text ? `<span class="when ${cls}" title="${esc(t.due)}">${text}</span>` : ""; }
+const cap1 = s => s ? s[0].toUpperCase() + s.slice(1) : s;
+
+function whenText(t, short) {      // [label, "late" | "soon" | ""]: a passed deadline is the whole label; else the plan, then the deadline
+  const today = S.data.today;
+  if (t[STATUS_KEY] === "done") return [t.done ? "Done " + dateText(t.done, short) : "Done", ""];
+  if (t[STATUS_KEY] === "dropped") return ["Dropped", ""];
+  if (t.kind === "reminder") {
+    const d = t.when || t.due; if (!d) return ["", ""];
+    return d < today ? [`Overdue · ${dateText(d, true)}`, "late"] : [cap1(dateText(d, short)), d === today ? "soon" : ""];
+  }
+  if (t.due && t.due < today) return [`Late · deadline ${dateText(t.due, true)}`, "late"];
+  const plan = !t.when ? "" : t.when > today ? `Planned ${dateText(t.when, short)}` : t.carried ? `Carried ${days(t.carried)}` : "Planned today";
+  const urgent = (t.when && t.when <= today) || t.due === today ? "soon" : "";
+  if (t.due) return [plan ? `${plan} · deadline ${dateText(t.due, true)}` : `Deadline ${dateText(t.due, short)}`, urgent];
+  return [plan, urgent];
+}
+function chaseText(t) {            // Waiting on others: when to chase, or how far past it
+  const c = t["chase-after"]; if (!c) return whenText(t);
+  const past = Math.round((day(S.data.today) - day(c)) / 864e5);
+  return past > 0 ? [`${days(past)} past the chase date`, "late"] : [`Chase after ${dateText(c, true)}`, ""];
+}
+function when(t, label = whenText) { const [text, cls] = label(t); return text ? `<span class="when ${cls}">${esc(text)}</span>` : ""; }
 
 function chips(t) {
   const out = [];
   if (t.priority === "high") out.push(`<span class="chip high">High priority</span>`);
-  if (t.decision) out.push(`<span class="chip decision">Decision</span>`);
-  if (t[STATUS_KEY] === "doing") out.push(`<span class="chip doing">In progress</span>`);
-  if (t[STATUS_KEY] === "blocked") out.push(`<span class="chip">Blocked</span>`);
-  if (t.effort) out.push(`<span class="chip ${t.effort}">${cap(t.effort)}</span>`);
-  if (t.owner !== S.data.me) out.push(`<span class="chip">With ${esc(t.owner)}</span>`);
+  if (t.decision && t[STATUS_KEY] !== "done") out.push(`<span class="chip decision">Decision</span>`);
+  if (t[STATUS_KEY] === "doing") out.push(`<span class="chip doing">Doing</span>`);
+  if (t[STATUS_KEY] === "blocked") {
+    const held = t.held_by || [];
+    out.push(`<span class="chip">On hold</span>`);
+    if (held.length) out.push(`<span class="chip wait">Waiting on: ${esc(held[0].title)}${held.length > 1 ? ` and ${held.length - 1} more` : ""}</span>`);
+  }
+  if (t.effort) out.push(`<span class="chip ${t.effort}">${EFFORT_NAMES[t.effort] || t.effort}</span>`);
+  if (!t.mine && t.owner) out.push(`<span class="chip">Whose move: ${esc(t.owner)}</span>`);
   return out.join("");
 }
 
 let rowNo = 0;
-function row(t, sub) {
+function row(t, sub, opts = {}) {
   const done = t[STATUS_KEY] === "done";
   const folder = S.view === "board" || !t.project_name ? "" : `<span>${esc(t.project_name)}</span>`;
   const no = STYLE.numbered ? `<span class="no">${++rowNo}</span>` : "";
-  const urgency = whenText(t)[1];              // "late" or "soon", so a style can mark the row as well as the date
+  const [, urgency] = (opts.label || whenText)(t);
+  const start = opts.start ? `<span class="start">Start here</span>` : "";
   return `<div class="task${sub ? " sub" : ""}${done ? " done" : ""}${STYLE.numbered ? " numbered" : ""}${urgency ? " w-" + urgency : ""}" data-name="${esc(t.name)}">${no}
-    <input type="checkbox" ${done ? "checked" : ""} ${LIVE ? "" : "disabled"} aria-label="Done: ${esc(t.title)}">
-    <button class="t" type="button"><span>${esc(t.title)}</span><span class="meta">${folder}${chips(t)}</span></button>
-    ${when(t)}</div>`;
+    <input type="checkbox" data-done ${done ? "checked" : ""} ${LIVE ? "" : "disabled"} aria-label="Done: ${esc(t.title)}">
+    <button class="t" type="button"><span>${start}${esc(t.title)}</span><span class="meta">${folder}${chips(t)}</span></button>
+    ${when(t, opts.label)}</div>`;
 }
 
 function greeting() {
@@ -341,16 +382,17 @@ function greeting() {
 
 function counts() {
   const d = S.data, all = byName(), today = d.today;
-  const overdue = d.views.today.filter(n => all[n] && all[n].due && all[n].due < today).length;
-  const remindersDue = d.views.reminders.filter(n => all[n] && all[n].due && all[n].due <= today).length;
+  const late = d.views.today.filter(n => all[n] && all[n].due && all[n].due < today).length;
+  const remindersDue = d.views.reminders.filter(n => all[n] && (all[n].when || all[n].due) && (all[n].when || all[n].due) <= today).length;
   const doneToday = d.tasks.filter(t => t[STATUS_KEY] === "done" && t.done === today && !["project", "reminder"].includes(t.kind)).length;
-  return {today: d.views.today.length, overdue, remindersDue, doneToday, decisions: d.views.decisions.length, inbox: d.views.inbox.length};
+  return {today: d.views.today.length, late, remindersDue, doneToday, unplanned: d.views.unplanned.length,
+          waiting: d.views.waiting.length, inbox: d.views.inbox.length};
 }
 
 function summaryHtml(c) {
-  let s = c.today ? `<b>${plural(c.today, "thing", "things")}</b> for today` : "Nothing urgent today";
-  s += c.overdue ? `, <b>${c.overdue} overdue</b>.` : ".";
-  if (c.decisions) s += ` <b>${plural(c.decisions, "decision", "decisions")}</b> waiting on you.`;
+  let s = c.today ? `<b>${c.today}</b> for today` : "Nothing planned for today";
+  s += c.late ? `, <b>${c.late} late</b>.` : ".";
+  if (c.unplanned) s += ` <b>${c.unplanned}</b> not planned yet.`;
   if (c.remindersDue) s += ` <b>${plural(c.remindersDue, "reminder", "reminders")}</b> today.`;
   return s;
 }
@@ -370,14 +412,14 @@ function gaugeHtml(c) {
   return `<div class="gauge ticks">${Array.from({length: 60}, (_, i) => `<span class="tick${i < on ? " on" : ""}" style="transform:rotate(${i * 6}deg) translateY(-88px)"></span>`).join("")}${centre}</div>`;
 }
 
-function weekHtml() {
+function weekHtml() {               // a dot on each day of this week that has a plan or a deadline
   const d = S.data, t0 = day(d.today), mon = new Date(t0);
   mon.setDate(t0.getDate() - ((t0.getDay() + 6) % 7));
-  const due = new Set(d.tasks.filter(t => OPEN.includes(t[STATUS_KEY]) && t.due).map(t => t.due));
+  const marked = new Set(d.tasks.filter(t => OPEN.includes(t[STATUS_KEY])).flatMap(t => [t.due, t.when]).filter(Boolean));
   return Array.from({length: 7}, (_, i) => {
     const x = new Date(mon); x.setDate(mon.getDate() + i);
     const k = iso(x);
-    return `<div class="day${k === d.today ? " on" : ""}"><span class="num">${x.getDate()}</span><span class="dow">${x.toLocaleDateString(undefined, {weekday:"short"})}</span><span class="dot${due.has(k) ? " has" : ""}"></span></div>`;
+    return `<div class="day${k === d.today ? " on" : ""}"><span class="num">${x.getDate()}</span><span class="dow">${x.toLocaleDateString(undefined, {weekday:"short"})}</span><span class="dot${marked.has(k) ? " has" : ""}"></span></div>`;
   }).join("");
 }
 
@@ -385,13 +427,12 @@ function sideHtml(c) {
   const d = S.data, all = byName();
   const rems = d.views.reminders.map(n => all[n]).filter(Boolean).slice(0, 4);
   $("#sideReminders").innerHTML = `<h3>Reminders <small>${c.remindersDue ? plural(c.remindersDue, "due", "due") : ""}</small></h3>`
-    + (rems.length ? rems.map(t => { const [w, cls] = whenText(t, true); return `<button class="t rem ${cls}" type="button" data-name="${esc(t.name)}"><span>${w || "No date"}</span><span>${esc(t.title)}</span></button>`; }).join("")
+    + (rems.length ? rems.map(t => { const [w, cls] = whenText(t, true); return `<button class="t rem ${cls}" type="button" data-name="${esc(t.name)}"><span>${esc((w || "No day").split(" · ")[0])}</span><span>${esc(t.title)}</span></button>`; }).join("")
                    : `<p class="none">No reminders.</p>`);
-  const decs = d.views.decisions.map(n => all[n]).filter(Boolean);
-  $("#sideDecisions").innerHTML = `<h3>Decisions <small>${decs.length || ""}</small></h3>`
-    + (decs.length ? `<div class="decision"><span>${esc(decs[0].title)}</span><small>${esc(decs[0].project_name || "No folder")}${decs[0].due ? " · " + whenText(decs[0])[0] : ""}</small></div>
-                      <button class="btn primary t" type="button" data-name="${esc(decs[0].name)}">Open the decision</button>`
-                   : `<p class="none">No decisions waiting on you.</p>`);
+  const waits = d.views.waiting.map(n => all[n]).filter(Boolean).slice(0, 4);
+  $("#sideWaiting").innerHTML = `<h3>Waiting on others <small>${d.views.waiting.length || ""}</small></h3>`
+    + (waits.length ? waits.map(t => { const [w, cls] = chaseText(t); return `<button class="t rem ${cls}" type="button" data-name="${esc(t.name)}"><span>${esc(w || (t["waiting-on"] || [])[0] || t.owner || "")}</span><span>${esc(t.title)}</span></button>`; }).join("")
+                    : `<p class="none">Nothing is waiting on anyone else.</p>`);
   const mon = day(d.today); mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7));
   const since = iso(mon);
   const work = d.tasks.filter(t => t.project_name && !["project", "reminder"].includes(t.kind));
@@ -403,14 +444,49 @@ function sideHtml(c) {
     const kids = goal ? d.tasks.filter(t => t.parent_name === goal.name) : [];
     return {f, open, done, note: goal ? `${d.labels.project}: ${goal.title}, ${kids.filter(t => t[STATUS_KEY] === "done").length} of ${kids.length} done` : ""};
   }).filter(x => x.open.length).sort((a, b) => b.open.length - a.open.length);
-  $("#sideFolders").innerHTML = `<h3>Board <small>${plural(folders.reduce((n, x) => n + x.open.length, 0), "open", "open")}</small></h3>`
+  $("#sideFolders").innerHTML = `<h3>By project <small>${plural(folders.reduce((n, x) => n + x.open.length, 0), "open", "open")}</small></h3>`
     + (folders.length ? folders.map(x => `<button class="fold" type="button" data-folder="${esc(x.f)}"><span class="row"><span>${esc(x.f)}</span><span>${x.open.length} open</span></span>
         <span class="cells">${[...x.open.map(t => `<span class="cell${(t.due && t.due < d.today) || t.priority === "high" ? " late" : ""}"></span>`), ...x.done.map(() => `<span class="cell done"></span>`)].slice(0, 16).join("")}</span>
         ${x.note ? `<small>${esc(x.note)}</small>` : ""}</button>`).join("") : `<p class="none">No open tasks.</p>`);
 }
 
+function todayHtml(list, later) {
+  const first = S.data.views.today[0];         // "Start here" stays on the plan's first row whatever the filters show
+  const rows = list.map(t => row(t, false, {start: t.name === first})).join("");
+  const strip = later.length ? `<details class="later"${S.later ? " open" : ""}><summary>Not planned yet <span class="count">${later.length}</span></summary>
+    <p class="explain">High priority, or a deadline within a week, and no planned day yet. Give one a day to put it on Today.</p>${later.map(t => row(t, false)).join("")}</details>` : "";
+  return (rows || `<p class="empty">${EMPTY.today}</p>`) + strip;
+}
+
+function boardHtml(d, all) {
+  // Grouping comes from the server (tree); filters apply to tasks only, so a goal is shown whenever
+  // it passes or any of its children pass, and a child can never be hidden by its goal.
+  let html = "", shown = 0;
+  for (const [v, node] of Object.entries(d.tree)) {
+    let section = "", count = 0;
+    for (const pr of node.projects) {
+      const p = all[pr.name]; if (!p) continue;
+      const kids = pr.children.map(n => all[n]).filter(t => t && passes(t));
+      if (!kids.length && !passes(p)) continue;
+      const closed = S.collapsed.has(p.name);
+      count += kids.length;
+      section += `<div class="project${closed ? " closed" : ""}" data-proj="${esc(p.name)}" data-name="${esc(p.name)}"><span class="chev" aria-hidden="true">${CHEV}</span>
+        <input type="checkbox" data-done ${LIVE ? "" : "disabled"} aria-label="Done: ${esc(p.title)}">
+        <button class="t" type="button" data-name="${esc(p.name)}"><span>${esc(p.title)}</span></button><span class="chip goal">${esc(d.labels.project)}</span><span class="count">${kids.length}</span></div>`;
+      if (!closed) section += kids.map(k => row(k, true)).join("");
+    }
+    const loose = node.loose.map(n => all[n]).filter(t => t && passes(t));
+    count += loose.length;
+    section += loose.map(t => row(t, false)).join("");
+    if (section) html += `<section class="folder"><header><h3>${v === "—" ? "No project or area" : esc(v)}</h3><span class="count">${count} open</span></header>${section}</section>`;
+    shown += count;
+  }
+  return [html ? `<div class="folders">${html}</div>` : "", shown];
+}
+
 function render() {
   const d = S.data, all = byName(), c = counts();
+  const pick = view => (d.views[view] || []).map(n => all[n]).filter(t => t && passes(t));
   $("#vault").textContent = d.vault;
   $("#stamp").textContent = day(d.today).toLocaleDateString(undefined, {weekday:"short", day:"numeric", month:"short"});
   $("#dateline").textContent = day(d.today).toLocaleDateString(undefined, {weekday:"long", day:"numeric", month:"long", year:"numeric"});
@@ -419,20 +495,21 @@ function render() {
   $("#banner").hidden = LIVE;
   if (!LIVE) $("#banner").textContent = `A read-only copy from ${d.today}. Open the board on your computer to tick things off or add to it.`;
 
-  const stats = [["today", c.today, "For today"], ["today", c.overdue, "Overdue", "alert"], ["decisions", c.decisions, "Decisions"], ["inbox", c.inbox, "To sort"]];
+  const stats = [["today", c.today, "For today"], ["today", c.late, "Late", "alert"], ["waiting", c.waiting, "Waiting on others"], ["inbox", c.inbox, "To sort"]];
   $("#stats").innerHTML = stats.map(([v, n, label, cls]) => `<button type="button" class="stat ${n ? cls || "" : "zero"}" data-v="${v}" data-jump="1"><b>${n}</b><span>${label}</span></button>`).join("");
   $("#gaugecard").hidden = !STYLE.gauge;
   if (STYLE.gauge) $("#gaugecard").innerHTML = gaugeHtml(c);
   $("#side").hidden = !STYLE.side;
   if (STYLE.side) sideHtml(c);
 
-  const n = {today: d.views.today.filter(x => passes(all[x])).length, reminders: c.remindersDue, decisions: c.decisions, inbox: c.inbox, waiting: d.views.waiting.length};
+  const n = {today: pick("today").length, reminders: c.remindersDue, waiting: d.views.waiting.length, onhold: d.views.onhold.length,
+             claude: d.views.claude.length, inbox: c.inbox};
   $("#tabs").innerHTML = VIEWS.map(([k, label]) => `<button type="button" data-v="${k}" class="${S.view === k ? "on" : ""}" ${S.view === k ? 'aria-current="page"' : ""}><span>${label}</span>${n[k] ? `<span class="n">${n[k]}</span>` : ""}</button>`).join("");
 
-  const owners = [...new Set(d.tasks.map(t => t.owner))].sort();
+  const owners = [...new Set(d.tasks.map(t => t.owner).filter(Boolean))].sort();
   const sel = (key, opts, label, names) => `<select data-f="${key}" aria-label="${label}" class="${S.filters[key] ? "set" : ""}"><option value="">${label}</option>${opts.map(o => `<option ${S.filters[key] === o ? "selected" : ""} value="${esc(o)}">${esc(names ? names[o] : o)}</option>`).join("")}</select>`;
-  $("#filters").innerHTML = sel("folder", d.folders, "All projects and areas") + sel("effort", ["deep", "medium", "easy", "unsized"], "Any effort", {deep:"Deep", medium:"Medium", easy:"Easy", unsized:"Not sized"})
-    + (owners.length > 1 ? sel("owner", owners, "Anyone") : "") + sel("priority", ["high", "normal", "low"], "Any priority", {high:"High", normal:"Normal", low:"Low"});
+  $("#filters").innerHTML = sel("folder", d.folders, "All projects and areas") + sel("effort", ["deep", "medium", "easy", "unsized"], "Any effort", {deep:"Deep", medium:"Medium", easy:"Quick", unsized:"No effort set"})
+    + (owners.length > 1 ? sel("owner", owners, "Whose move") : "") + sel("priority", ["high", "normal", "low"], "Any priority", {high:"High", normal:"Normal", low:"Low"});
 
   const [title, explain] = HEADS[S.view];
   $("#vtitle").textContent = title;
@@ -441,31 +518,16 @@ function render() {
   if (STYLE.week) $("#week").innerHTML = weekHtml();
   let html = "", shown = 0;
   rowNo = 0;
-  if (S.view === "board") {
-    // Grouping comes from the server (tree); filters apply to tasks only, so a goal is shown whenever
-    // it passes or any of its children pass, and a child can never be hidden by its goal.
-    for (const [v, node] of Object.entries(d.tree)) {
-      let section = "", count = 0;
-      for (const pr of node.projects) {
-        const p = all[pr.name]; if (!p) continue;
-        const kids = pr.children.map(n => all[n]).filter(t => t && passes(t));
-        if (!kids.length && !passes(p)) continue;
-        const closed = S.collapsed.has(p.name);
-        count += kids.length;
-        section += `<div class="project${closed ? " closed" : ""}" data-proj="${esc(p.name)}"><span class="chev" aria-hidden="true">${CHEV}</span><button class="t" type="button" data-name="${esc(p.name)}"><span>${esc(p.title)}</span></button><span class="chip goal">${esc(d.labels.project)}</span><span class="count">${kids.length}</span></div>`;
-        if (!closed) section += kids.map(k => row(k, true)).join("");
-      }
-      const loose = node.loose.map(n => all[n]).filter(t => t && passes(t));
-      count += loose.length;
-      section += loose.map(t => row(t, false)).join("");
-      if (section) html += `<section class="folder"><header><h3>${v === "—" ? "No project or area" : esc(v)}</h3><span class="count">${count} open</span></header>${section}</section>`;
-      shown += count;
-    }
-    if (html) html = `<div class="folders">${html}</div>`;
+  if (S.view === "today") {
+    const list = pick("today");
+    html = todayHtml(list, pick("unplanned"));
+    shown = list.length;
+  } else if (S.view === "board") {
+    [html, shown] = boardHtml(d, all);
   } else {
-    const rows = (d.views[S.view] || []).map(n => all[n]).filter(t => t && passes(t));
+    const rows = pick(S.view);
     shown = rows.length;
-    html = rows.map(t => row(t, false)).join("");
+    html = rows.map(t => row(t, false, {label: S.view === "waiting" ? chaseText : undefined})).join("");
   }
   $("#vlabel").textContent = `${VIEWS.find(v => v[0] === S.view)[1]} · ${shown}`;
   $("#main").innerHTML = html || `<p class="empty">${Object.values(S.filters).some(Boolean) ? "Nothing matches these filters." : EMPTY[S.view]}</p>`;
@@ -476,34 +538,52 @@ function bodyHtml(body) {
   return esc(body.trim()).replace(/\[\[([^\]|#]+)(?:[#|][^\]]*)?\]\]/g, (m, name) => `<a href="${obs(name.trim())}">${esc(name.trim())}</a>`);
 }
 
+function relations(t) {              // what this task waits on, and what waits on it
+  const holding = S.data.tasks.filter(x => (x.held_by || []).some(h => h.name === t.name));
+  const item = (name, title, status) => `<button type="button" class="rel-item" data-go="${esc(name)}"><span>${esc(title)}</span><span>${esc(STATUS_NAMES[status] || status)}</span></button>`;
+  return ((t.held_by || []).length ? `<div class="rel"><p class="label">Blocked by</p>${t.held_by.map(h => item(h.name, h.title, h.status)).join("")}</div>` : "")
+       + (holding.length ? `<div class="rel"><p class="label">Holding up</p>${holding.map(x => item(x.name, x.title, x[STATUS_KEY])).join("")}</div>` : "");
+}
+
 function openPanel(name) {
   const t = byName()[name]; if (!t) return; S.open = name;
   const dis = LIVE ? "" : "disabled";
   const opt = (opts, cur, names) => opts.map(o => `<option ${o === (cur || "") ? "selected" : ""} value="${esc(o)}">${esc(names ? names[o] : o) || "None"}</option>`).join("");
   const seg = (key, opts, cur, label) => `<div class="seg" role="group" aria-label="${label}">${opts.map(([v, l]) => `<button type="button" data-seg="${key}" data-val="${v}" aria-pressed="${v === cur}" ${dis}>${esc(l)}</button>`).join("")}</div>`;
   const field = (label, control, id) => `<div class="field">${id ? `<label for="${id}">${label}</label>` : `<span>${label}</span>`}${control}</div>`;
-  const L = S.data.labels;
+  const L = S.data.labels, kind = t.kind || "task";
   const goals = S.data.projects.filter(p => p !== t.name);
   const titles = Object.fromEntries(S.data.tasks.map(x => [x.name, x.title]));      // goals are saved by filename; show their titles
-  const showGoal = t.kind !== "project" && (goals.length || t.parent_name);         // nothing to pick until a goal exists
-  const showOwner = t.owner !== S.data.me || new Set(S.data.tasks.map(x => x.owner)).size > 1;
-  const statuses = t[STATUS_KEY] === "blocked" ? ["blocked","inbox","todo","doing","someday","done","dropped"] : ["inbox","todo","doing","someday","done","dropped"];
-  $("#panelBody").innerHTML = `<p class="label">${esc(L[t.kind || "task"] || L.task)}${t.project_name ? " · " + esc(t.project_name) : ""}</p>
+  const showGoal = kind === "task" && (goals.length || t.parent_name);              // nothing to pick until a goal exists
+  const showOwner = kind !== "reminder" && (!t.mine || new Set(S.data.tasks.map(x => x.owner).filter(Boolean)).size > 1);
+  const statuses = t[STATUS_KEY] === "blocked" ? ["blocked","someday","done","dropped"] : ["inbox","todo","doing","someday","done","dropped"];
+  const fields = [field("Status", `<select id="f-status" data-k="${STATUS_KEY}" ${dis}>${opt(statuses, t[STATUS_KEY], STATUS_NAMES)}</select>`, "f-status")];
+  if (kind === "reminder") {
+    fields.push(field("Day", `<input id="f-when" type="date" data-k="when" data-blur="1" value="${esc(t.when || t.due || "")}" ${dis}>`, "f-when"));
+  } else {
+    fields.push(field("Priority", seg("priority", [["high","High"],["normal","Normal"],["low","Low"]], t.priority, "Priority")),
+      field("Effort", seg("effort", [["deep","Deep"],["medium","Medium"],["easy","Quick"],["","Not set"]], t.effort || "", "Effort")),
+      field("Decision", seg("decision", [["false","No"],["true","Yes, mine to make"]], String(!!t.decision), "Decision")),
+      field("Planned", `<input id="f-when" type="date" data-k="when" data-blur="1" value="${esc(t.when || "")}" ${dis}>`, "f-when"),
+      field("Deadline", `<input id="f-due" type="date" data-k="due" data-blur="1" value="${esc(t.due || "")}" ${dis}>`, "f-due"));
+  }
+  fields.push(field("Kind", seg("kind", [["task", L.task],["project", L.project],["reminder", L.reminder]], kind, "Kind")),
+    field("Project or area", `<select id="f-project" data-k="project" ${dis}>${opt(["", ...S.data.folders], t.project_name)}</select>`, "f-project"));
+  if (showGoal) fields.push(field(esc(L.project), `<select id="f-parent" data-k="parent" ${dis}>${opt(["", ...goals], t.parent_name, titles)}</select>`, "f-parent"));
+  if (showOwner) fields.push(field("Whose move", `<input id="f-owner" data-k="owner" value="${esc(t.owner || "")}" ${dis}>`, "f-owner"));
+  const watch = kind === "task" ? `<div class="fields watch"><p class="label">Waiting on someone outside</p>
+      ${field("Waiting on", `<input id="f-wait" data-k="waiting-on" value="${esc((t["waiting-on"] || []).join(", "))}" placeholder="a person, a company" ${dis}>`, "f-wait")}
+      ${field("Expecting", `<input id="f-expect" data-k="expecting" value="${esc(t.expecting || "")}" placeholder="what you're waiting for" ${dis}>`, "f-expect")}
+      ${field("Chase after", `<input id="f-chase" type="date" data-k="chase-after" data-blur="1" value="${esc(t["chase-after"] || "")}" ${dis}>`, "f-chase")}</div>` : "";
+  const chased = LIVE && S.data.views.waiting.includes(t.name) ? `<button class="btn ghost" type="button" data-chased="1">Chased them today</button>` : "";
+  $("#panelBody").innerHTML = `<p class="label">${esc(L[kind] || L.task)}${t.project_name ? " · " + esc(t.project_name) : ""}</p>
     <h2>${esc(t.title)}</h2>
     ${LIVE ? "" : `<p class="ro">This is a read-only copy. Open the board on your computer to change anything.</p>`}
-    <div class="fields">
-      ${field("Status", `<select id="f-status" data-k="${STATUS_KEY}" ${dis}>${opt(statuses, t[STATUS_KEY], STATUS_NAMES)}</select>`, "f-status")}
-      ${field("Priority", seg("priority", [["high","High"],["normal","Normal"],["low","Low"]], t.priority, "Priority"))}
-      ${field("Effort", seg("effort", [["deep","Deep"],["medium","Medium"],["easy","Easy"],["","Not sized"]], t.effort || "", "Effort"))}
-      ${field("Kind", seg("kind", [["task", L.task],["project", L.project],["reminder", L.reminder]], t.kind || "task", "Kind"))}
-      ${field("Decision", seg("decision", [["false","No"],["true","Yes, mine to make"]], String(!!t.decision), "Decision"))}
-      ${field("Due", `<input id="f-due" type="date" data-k="due" data-blur="1" value="${esc(t.due || "")}" ${dis}>`, "f-due")}
-      ${field("Project or area", `<select id="f-project" data-k="project" ${dis}>${opt(["", ...S.data.folders], t.project_name)}</select>`, "f-project")}
-      ${showGoal ? field(esc(L.project), `<select id="f-parent" data-k="parent" ${dis}>${opt(["", ...goals], t.parent_name, titles)}</select>`, "f-parent") : ""}
-      ${showOwner ? field("Owner", `<input id="f-owner" data-k="owner" value="${esc(t.owner)}" ${dis}>`, "f-owner") : ""}
-    </div>
+    <div class="fields">${fields.join("")}</div>
+    ${watch}
+    ${relations(t)}
     <div class="notes"><p class="label">Notes and history</p><div class="body">${bodyHtml(t.body)}</div></div>
-    <div class="actions"><a class="btn primary" href="${obs("Tasks/" + t.name)}">Open in Obsidian</a>${t.parent_name ? `<button class="btn ghost" type="button" data-go="${esc(t.parent_name)}">${esc(L.project)}: ${esc(titles[t.parent_name] || t.parent_name)}</button>` : ""}</div>`;
+    <div class="actions"><a class="btn primary" href="${obs("Tasks/" + t.name)}">Open in Obsidian</a>${chased}${t.parent_name ? `<button class="btn ghost" type="button" data-go="${esc(t.parent_name)}">${esc(L.project)}: ${esc(titles[t.parent_name] || t.parent_name)}</button>` : ""}</div>`;
   $("#panel").classList.add("open");
   document.body.classList.add("panel-open");
 }
@@ -511,21 +591,30 @@ function openPanel(name) {
 function closePanel() { $("#panel").classList.remove("open"); document.body.classList.remove("panel-open"); S.open = null; }
 
 let queue = Promise.resolve();                 // saves run one at a time, each against the latest version
-function save(name, changes) {
-  queue = queue.then(() => doSave(name, changes)).catch(() => {});
+function save(name, changes, note = "") {
+  queue = queue.then(() => doSave(name, changes, note)).catch(() => {});
   return queue;
 }
-async function doSave(name, changes) {
+async function doSave(name, changes, note) {
   const t = byName()[name]; if (!t) return;
   let r, j;
   try {
-    r = await fetch("/api/update", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({name, version: t.version, changes})});
+    r = await fetch("/api/update", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({name, version: t.version, changes, note})});
     j = await r.json();
   } catch (e) { toast("Not saved: can't reach the board. Ask Claude to open the board."); await load(); return; }
   if (r.status === 409) { toast("Changed elsewhere, so the board reloaded. Try again."); await load(); if (S.open === name) openPanel(name); return; }
-  if (!r.ok) { toast("Not saved: " + (j.error || r.status)); await load(); return; }
+  if (!r.ok) { toast("Not saved: " + (j.error || r.status)); await load(); if (S.open === name) openPanel(name); return; }   // the panel shows what was kept
   await load();
   if (S.open === name) { if (j.task) openPanel(name); else closePanel(); }
+}
+
+async function setStatus(name, value) {     // dropping asks for the reason; it goes in the log line
+  if (value === "dropped") {
+    const why = (window.prompt("Why drop it? One line, so you know later.") || "").trim();
+    if (!why) { toast("Not dropped: say why in one line"); if (S.open === name) openPanel(name); else render(); return; }
+    return save(name, {[STATUS_KEY]: value}, why);
+  }
+  return save(name, {[STATUS_KEY]: value});
 }
 
 document.addEventListener("click", async e => {
@@ -533,21 +622,26 @@ document.addEventListener("click", async e => {
   if (tab) { S.view = tab.dataset.v; render(); if (tab.dataset.jump) $("#viewhead").scrollIntoView({block:"start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"}); return; }
   const seg = e.target.closest("[data-seg]");
   if (seg) { if (LIVE && S.open && seg.getAttribute("aria-pressed") !== "true") await save(S.open, {[seg.dataset.seg]: seg.dataset.val}); return; }
+  if (e.target.closest("[data-chased]") && LIVE && S.open) { await save(S.open, {chased: true}); toast("Logged. The chase date moved a week on."); return; }
   const fold = e.target.closest("[data-folder]");
   if (fold) { S.view = "board"; S.filters.folder = fold.dataset.folder; render(); $("#viewhead").scrollIntoView({block:"start"}); return; }
+  if (e.target.closest("input[data-done]")) return;          // the tick box is handled on change
   const proj = e.target.closest(".project"); if (proj && !e.target.closest(".t")) { const n = proj.dataset.proj; S.collapsed.has(n) ? S.collapsed.delete(n) : S.collapsed.add(n); render(); return; }
   const go = e.target.closest("[data-go]"); if (go) { openPanel(go.dataset.go); return; }
   const title = e.target.closest(".t"); if (title) { openPanel(title.dataset.name || title.closest("[data-name]").dataset.name); return; }
   if (e.target.closest(".close") || e.target.id === "scrim") closePanel();
 });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && S.open) closePanel(); });
+document.addEventListener("toggle", e => { if (e.target.matches && e.target.matches(".later")) S.later = e.target.open; }, true);   // stays open across re-renders
 document.addEventListener("change", async e => {
   const f = e.target.closest("[data-f]"); if (f) { S.filters[f.dataset.f] = f.value; render(); return; }
-  const cb = e.target.closest('.task input[type=checkbox]'); if (cb && LIVE) { await save(cb.closest("[data-name]").dataset.name, {[STATUS_KEY]: cb.checked ? "done" : "todo"}); return; }
-  const k = e.target.closest("[data-k]"); if (k && LIVE && S.open && !k.dataset.blur) { await save(S.open, {[k.dataset.k]: k.value}); }
+  const cb = e.target.closest("input[data-done]"); if (cb && LIVE) { await save(cb.closest("[data-name]").dataset.name, {[STATUS_KEY]: cb.checked ? "done" : "todo"}); return; }
+  const k = e.target.closest("[data-k]"); if (!(k && LIVE && S.open && !k.dataset.blur)) return;
+  if (k.dataset.k === STATUS_KEY) { await setStatus(S.open, k.value); return; }
+  await save(S.open, {[k.dataset.k]: k.value});
 });
-document.addEventListener("focusout", async e => {   // the date input saves when you leave it, not on every keystroke
-  const k = e.target.closest("[data-blur]"); if (k && LIVE && S.open && k.value !== (byName()[S.open]?.due || "")) { await save(S.open, {[k.dataset.k]: k.value}); }
+document.addEventListener("focusout", async e => {   // a date saves when you leave it, not on every keystroke
+  const k = e.target.closest("[data-blur]"); if (k && LIVE && S.open && k.value !== (byName()[S.open]?.[k.dataset.k] || "")) { await save(S.open, {[k.dataset.k]: k.value}); }
 });
 document.addEventListener("visibilitychange", () => { if (LIVE && !document.hidden && !S.open && S.data) load(); });   // pick up what Claude changed while you were away
 
@@ -559,8 +653,8 @@ async function addDump() {
   try {
     const r = await fetch("/api/add", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({lines})});
     const j = await r.json();
-    $("#dump").value = j.errors.length ? j.errors.map(x => x.split(": ").slice(0, -1).join(": ") || x).join("\n") : "";
-    toast(`${j.created.length} added to To sort${j.errors.length ? `, ${j.errors.length} not added (${j.errors[0]})` : ""}`);
+    $("#dump").value = j.rejected.map(x => x.line).join("\n");     // the box keeps only the lines that weren't added, as typed
+    toast(`${j.created.length} added to To sort${j.rejected.length ? `. Not added: ${j.rejected.map(x => x.error).join("; ")}` : ""}`);
     await load();
   } catch (e) { toast("Not added: can't reach the board. Ask Claude to open the board."); }
   finally { dumping = false; }

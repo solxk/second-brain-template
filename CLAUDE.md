@@ -12,7 +12,7 @@ Until `vault.json` says `"setup": "done"`, this folder isn't set up. Read `SETUP
 2. Run `python3 Scripts/tasks.py sync`, then `python3 Scripts/tasks.py brief`.
 3. If Google Calendar is connected, read today's and tomorrow's events. If Google Tasks is connected, read its **Phone** list: each item becomes a task, a reminder or a To watch entry, then is ticked off there.
 4. Check `Inbox/`, and the "Recently shifted" section of each folder note the brief mentions.
-5. Open with a short briefing: today's events, reminders for today, overdue and due soon, decisions waiting, things to sort, anything untouched for two weeks.
+5. Open with a short briefing: today's events, Today from the brief (start with its "Start here" task), reminders due, anything not planned yet, decisions waiting, things waiting on others past their chase date, things to sort, anything untouched for two weeks.
 
 ## On session end
 
@@ -33,7 +33,7 @@ Claude may create and edit anything in `Inbox/`, `Projects/`, `Areas/`, `Resourc
 - `Projects/` is work: businesses, side businesses, client work, things being built. `Areas/` is life: health, money, home, family, the day job, study. A folder never moves between the two. Anything with a finish line lives inside its folder as a goal or a task.
 - Work is a **task** in `Tasks/`. A nudge on a date (post a letter, call mum) is a **reminder**: a task note with `kind: reminder`, kept in its own list so it doesn't clog the work. Test: if you'd want to know later that it was done and why, it's a task; if you only need not to forget it, it's a reminder. If the owner wants reminders out of the folder altogether, they can live in Google Tasks or Microsoft To Do once that's connected.
 - A link or video to get to goes under "To watch" in `Resources/Resources.md`, or in the Google Tasks **To watch** list if that's connected. A habit (no screens after ten) goes under Loose ends in its area's folder note.
-- How tasks, goals and reminders work, and the commands: `Tasks/Tasks.md`. Read it before creating or changing tasks.
+- How tasks, goals and reminders work, and the commands: `Tasks/Tasks.md`. Read it before creating or changing tasks. Change a task only with `tasks.py set` or the board, never by editing its fields.
 - Anything in `Inbox/` is unfiled. Ingest it: put it where it belongs, link it, update any note it changes, flag anything it contradicts, then remove the copy in `Inbox/`. Keep heavy originals (contracts, statements) word for word, with a short `.md` summary next to them.
 
 ## Linking

@@ -117,14 +117,14 @@ Without Google, phone capture is simple: note it however you already do (Notes, 
 Ask: "Everything on your mind that needs doing, big or small, one per line. Don't sort it."
 
 Then, for each line, propose one of:
-- a **task**: which project or area, a priority with a one-line reason, the effort, and whether it's a decision;
+- a **task**: which project or area, a priority with a one-line reason, the effort, whether it's a decision, any real deadline, and the day they plan to do it if they have one;
 - a **reminder**: the day it's for, no folder needed;
 - a **To watch** entry: a link or video;
 - a **habit**: Loose ends in the area note. If it has no area yet, offer to make one.
 
 Something that repeats (a long run every Sunday) is a habit, or a repeating event in their calendar: tasks and reminders don't repeat. Say so if it comes up.
 
-Ask about any date that isn't certain. Show the proposed list as a table and apply their corrections. Then create everything: tasks with `python3 Scripts/tasks.py add ...`, reminders with `add "..." --kind reminder --due <date>`, and the rest where it belongs.
+Ask about any date that isn't certain, and keep the two kinds apart: a deadline someone else set is `--due`; a day they mean to do it is `--when`. Show the proposed list as a table and apply their corrections. Then create everything: tasks with `python3 Scripts/tasks.py add ...`, reminders with `add "..." --kind reminder --when <date>`, and the rest where it belongs.
 
 Then add two reminders of your own, and tell them why:
 - "Re-read Me.md and fix whatever's drifted", one month from today;
@@ -135,9 +135,9 @@ Then add two reminders of your own, and tell them why:
 1. Run `python3 Scripts/tasks.py sync`, then `python3 Scripts/tasks.py brief`.
 2. Start the board: run `python3 Scripts/tasks_board.py serve` in the background, and tell them to open http://127.0.0.1:8765/. Walk them through it in four sentences:
    - the brain-dump box;
-   - Today;
+   - Today: what they planned for today, deadlines due or late, and anything in progress, with "Start here" on the first row; underneath, "Not planned yet" holds important things with no day yet;
    - Reminders;
-   - Board, with Decisions next to it.
+   - By project, and Waiting on others for things someone else owes them.
 
    Say that it runs while this session is open, and that "open the board" in any session brings it back.
 
@@ -149,7 +149,7 @@ Then add two reminders of your own, and tell them why:
    They never file anything themselves.
 4. Explain the phone:
    - capture goes to the Phone list (step 4), or gets pasted in later;
-   - if the folder syncs to their phone, `Tasks/Board.html` is a read-only copy of the board.
+   - if the folder syncs to their phone, `Tasks/Board.html` is a read-only copy of the board. If two computers share the folder, ask which one should write that copy, and set `"snapshot_host"` in `vault.json` to its name (run `hostname` on it); otherwise the sync service makes conflict copies of it.
 5. Explain backup in one line: it's a folder, so back it up like any other. If it lives in iCloud Drive, OneDrive, Dropbox or Google Drive, it's already copied. If they ever want a history of every change, it can become a git repo, and Claude will commit at the end of each session.
 6. Delete `Inbox/Setup notes.md` and set `"setup": "done"` in `vault.json`.
 7. End by saying what to try tomorrow: open a session and say "what's on today?".

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""tasks_board.py — the web board over the vault task database (Tasks/).
+"""tasks_board.py — the web board over the folder's task notes (Tasks/).
 
-Part of the Second Brain template. Run from the vault root:
+Part of the Second Brain template. Run from the folder's top level (where vault.json is):
 
   python3 Scripts/tasks_board.py serve [--host 127.0.0.1] [--port 8765]
   python3 Scripts/tasks_board.py export            # writes Tasks/Board.html, the read-only snapshot
@@ -12,6 +12,9 @@ vault.json "board_style" picks one; /styles on the running board shows the owner
 
 The server reads and writes task notes only through tasks.py. It listens on this computer only, unless --host
 says otherwise. Nothing here is meant for the public internet. Starting it while it is already running just says so.
+
+Tasks/Board.html, the read-only copy for a phone, is written by `sync` and `export`. When two computers share
+the folder, vault.json "snapshot_host" names the one that writes it; two writers make sync-service conflict copies.
 """
 from __future__ import annotations
 
@@ -19,6 +22,7 @@ import argparse
 import errno
 import http.client
 import json
+import socket
 import sys
 import threading
 from datetime import date
@@ -36,6 +40,7 @@ STYLES_DIR = Path(__file__).with_name("board_styles")
 STYLE_MARKER = "<!--BOARD_STYLE-->"
 CONFIG = T.VAULT / "vault.json"
 WRITE_LOCK = threading.Lock()                    # one writer at a time: version check, write and sync together
+EFFORT_WORDS = {"deep": "Deep", "medium": "Medium", "easy": "Quick"}           # easy is stored; "quick" is what it means
 DEFAULT_LABELS = {"task": "Task", "project": "Goal", "reminder": "Reminder"}   # what the board calls each kind;
                                                  # vault.json "labels" overrides (e.g. {"project": "Project"})
 
@@ -59,7 +64,7 @@ def board_tree(tasks: dict) -> dict:
     return tree
 
 
-def task_json(t: dict) -> dict:
+def task_json(t: dict, today: date | None = None, tasks: dict | None = None, archived: dict | None = None) -> dict:
     d = {k: v for k, v in t.items() if not k.startswith("_")}
     d["name"] = t["_path"].stem
     d["body"] = t["_body"]
@@ -67,6 +72,11 @@ def task_json(t: dict) -> dict:
     d["project_name"] = T.link_name(t["project"]) if t.get("project") else ""
     d["parent_name"] = T.link_name(t["parent"]) if t.get("parent") else ""
     d["decision"] = T.is_decision(t)
+    d["mine"] = T.is_me(t.get("owner")) or t.get("kind") == "reminder"
+    d["carried"] = T.carried_days(t, today or date.today())   # the page reads "Carried N days"
+    d["waiting-on"] = T.watch_parties(t)
+    held = T.open_dependencies(t, tasks or {}, archived) if tasks is not None else []
+    d["held_by"] = [{"name": h["_path"].stem, "title": h["title"], "status": h[T.STATUS]} for h in held]   # "Waiting on: X"
     return d
 
 
@@ -76,12 +86,13 @@ def payload(folder: Path = T.TASKS_DIR, today: date | None = None, vault_name: s
     if labels is None:
         labels = T._config().get("labels") or {}
     tasks, errors = T.load_tasks(folder)
+    archived, _ = T.load_tasks(folder / "Archive")
     v = T.views(tasks, today)
     return {
         "today": today.isoformat(),
         "vault": vault_name or T._config().get("vault_name") or T.VAULT.name,
         "me": T.OWNER,
-        "tasks": [task_json(t) for t in tasks.values()],
+        "tasks": [task_json(t, today, tasks, archived) for t in tasks.values()],
         "views": {k: [t["_path"].stem for t in rows] for k, rows in v.items()},
         "tree": board_tree(tasks),
         "labels": {**DEFAULT_LABELS, **labels},
@@ -212,30 +223,30 @@ class Handler(BaseHTTPRequestHandler):
     def _write(self, req: dict) -> None:
         today = date.today()
         if self.path == "/api/add":
-            created, errors = [], []
+            created, rejected = [], []                # rejected keeps each line as typed, so the page can put it back
             for line in str(req.get("lines", "")).splitlines():
                 if not line.strip():
                     continue
                 try:
                     created.append(T.add_task(self.folder, today, line.strip(), inbox=True).stem)
                 except T.TaskError as e:
-                    errors.append(f"{line.strip()}: {e}")
-            return self._send(200, {"created": created, "errors": errors})
+                    rejected.append({"line": line, "error": str(e)})
+            return self._send(200, {"created": created, "rejected": rejected})
         if self.path == "/api/update":
             tasks, _ = T.load_tasks(self.folder)
             t = tasks.get(str(req.get("name")))
             if t is None:
                 return self._send(404, {"error": "no such task"})
             if str(t["_path"].stat().st_mtime_ns) != str(req.get("version")):
-                return self._send(409, {"error": "changed on disk, reloaded", "task": task_json(t)})
+                return self._send(409, {"error": "changed on disk, reloaded", "task": task_json(t, today)})
             try:
-                T.update_task(self.folder, req["name"], req.get("changes") or {}, today)
+                T.update_task(self.folder, req["name"], req.get("changes") or {}, today, note=str(req.get("note") or ""))
             except T.TaskError as e:
                 return self._send(400, {"error": str(e)})
             T.sync(self.folder, today, archive=False)  # blocked/todo and the done date; archiving waits for the CLI sync
             tasks, _ = T.load_tasks(self.folder)
             t = tasks.get(req["name"])
-            return self._send(200, {"task": task_json(t) if t else None})
+            return self._send(200, {"task": task_json(t, today) if t else None})
         self._send(404, {"error": "not found"})
 
     def log_message(self, *args) -> None:           # keep the terminal quiet
@@ -254,28 +265,38 @@ def _esc(s) -> str:
     return str(s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
 
 
+def _short(iso: str) -> str:
+    try:
+        d = date.fromisoformat(iso)
+        return f"{d.day} {d:%b}"
+    except ValueError:
+        return iso
+
+
 def _chips(t: dict, today: str) -> str:
     out = []
+    if t.get("kind") == "reminder":
+        day = t.get("when") or t.get("due")
+        if day:
+            out.append(f'<span class="chip {"overdue" if day < today else ""}">{"Overdue · " if day < today else ""}{_esc(_short(day))}</span>')
+        return "".join(out)
     if t.get("due"):
         late = t["due"] < today
-        try:
-            d = date.fromisoformat(t["due"])
-            shown = f"{d.day} {d:%b}"
-        except ValueError:
-            shown = t["due"]
-        out.append(f'<span class="chip {"overdue" if late else ""}">{"Overdue · " if late else "Due "}{_esc(shown)}</span>')
+        out.append(f'<span class="chip {"overdue" if late else ""}">{"Late · deadline " if late else "Deadline "}{_esc(_short(t["due"]))}</span>')
+    if t.get("when"):
+        out.append(f'<span class="chip">{"Carried" if t["when"] < today else "Planned"} {_esc(_short(t["when"]))}</span>')
     if t.get("priority") == "high":
         out.append('<span class="chip high">High priority</span>')
     if t.get("decision"):
         out.append('<span class="chip decision">Decision</span>')
     if t.get(T.STATUS) == "doing":
-        out.append('<span class="chip doing">In progress</span>')
-    if t.get(T.STATUS) == "blocked":
-        out.append('<span class="chip">Blocked</span>')
+        out.append('<span class="chip doing">Doing</span>')
+    if t.get("held_by"):
+        out.append(f'<span class="chip">Waiting on: {_esc(t["held_by"][0]["title"])}</span>')
     if t.get("effort"):
-        out.append(f'<span class="chip {_esc(t["effort"])}">{_esc(str(t["effort"]).capitalize())}</span>')
-    if t.get("owner") and t["owner"] != T.OWNER:
-        out.append(f'<span class="chip">With {_esc(t["owner"])}</span>')
+        out.append(f'<span class="chip {_esc(t["effort"])}">{_esc(EFFORT_WORDS.get(t["effort"], t["effort"]))}</span>')
+    if t.get("owner") and not t.get("mine"):
+        out.append(f'<span class="chip">Whose move: {_esc(t["owner"])}</span>')
     return "".join(out)
 
 
@@ -285,18 +306,20 @@ def static_html(data: dict) -> str:
     by = {t["name"]: t for t in data["tasks"]}
     today = data["today"]
 
-    def row(t, sub=False):
+    def row(t, sub=False, start=False):
+        mark = '<span class="start">Start here</span> ' if start else ""
         return (f'<div class="task{" sub" if sub else ""}"><input type="checkbox" disabled{" checked" if t[T.STATUS] == "done" else ""}>'
-                f'<div class="t"><div>{_esc(t["title"])}</div><div class="meta">{_esc(t["project_name"]) + " · " if t.get("project_name") else ""}{_chips(t, today)}</div></div></div>')
+                f'<div class="t"><div>{mark}{_esc(t["title"])}</div><div class="meta">{_esc(t["project_name"]) + " · " if t.get("project_name") else ""}{_chips(t, today)}</div></div></div>')
 
-    def section(title, names):
-        rows = [row(by[n]) for n in names if n in by]
+    def section(title, names, start=False):
+        rows = [row(by[n], start=start and i == 0) for i, n in enumerate(n for n in names if n in by)]
         return f'<div class="group">{title}</div>' + ("".join(rows) if rows else '<p class="empty">Nothing here.</p>')
 
-    parts = [section("Today", data["views"]["today"]), section("Reminders", data["views"]["reminders"]),
-             section("Decisions", data["views"]["decisions"]), section("Waiting on others", data["views"]["waiting"]),
-             section("To sort", data["views"]["inbox"])]
-    board = ['<div class="group">Board</div>']
+    v = data["views"]
+    parts = [section("Today", v["today"], start=True), section("Not planned yet", v["unplanned"]),
+             section("Reminders", v["reminders"]), section("Waiting on others", v["waiting"]),
+             section("On hold", v["onhold"]), section("To sort", v["inbox"])]
+    board = ['<div class="group">By project</div>']
     for folder, node in data["tree"].items():
         board.append(f'<div class="group">{_esc(folder)}</div>')
         for pr in node["projects"]:
@@ -306,6 +329,21 @@ def static_html(data: dict) -> str:
                 board += [row(by[n], True) for n in pr["children"] if n in by]
         board += [row(by[n]) for n in node["loose"] if n in by]
     return "".join(parts) + "".join(board)
+
+
+def snapshot_host() -> str:
+    """vault.json "snapshot_host": the one computer that writes Tasks/Board.html; empty means any computer."""
+    return str(T._config().get("snapshot_host") or "").strip()
+
+
+def is_snapshot_host(name: str | None = None) -> bool:
+    """True when this computer may write the snapshot: no snapshot_host is set (one computer), or this is it.
+    Two computers on one synced folder both writing it make conflict copies."""
+    want = snapshot_host()
+    if not want:
+        return True
+    host = (socket.gethostname() if name is None else name).split(".")[0].lower()
+    return host == want.split(".")[0].lower()
 
 
 def export_snapshot(folder: Path = T.TASKS_DIR, today: date | None = None, out: Path = SNAPSHOT,
@@ -340,14 +378,15 @@ def board_running(host: str, port: int) -> bool:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
-    s = sub.add_parser("serve")
+    s = sub.add_parser("serve", help="start the board")
     s.add_argument("--host", default="127.0.0.1", help="this computer only (the default)")
-    s.add_argument("--port", type=int, default=8765)
+    s.add_argument("--port", type=int, default=8765, help="the port to listen on (default 8765)")
     s.add_argument("--vault-name", default=None, help="Obsidian vault name for open links (default: vault.json, else the folder name)")
-    e = sub.add_parser("export")
-    e.add_argument("--vault-name", default=None)
+    e = sub.add_parser("export", help="write Tasks/Board.html, the read-only copy for a phone")
+    e.add_argument("--vault-name", default=None, help="Obsidian vault name for open links")
+    e.add_argument("--force", action="store_true", help="write it even though vault.json's snapshot_host names another computer")
     st = sub.add_parser("style", help="list the board styles, or switch to one")
-    st.add_argument("name", nargs="?")
+    st.add_argument("name", nargs="?", help="the style to switch to, by name or label")
     args = ap.parse_args(argv)
     if args.cmd == "style":
         if not args.name:
@@ -360,10 +399,14 @@ def main(argv=None) -> int:
         except ValueError as err:
             print(err)
             return 1
-        export_snapshot()
+        if is_snapshot_host():
+            export_snapshot()
         print(f"Board style: {label}. Reload the board to see it.")
         return 0
     if args.cmd == "export":
+        if not (args.force or is_snapshot_host()):
+            print(f"snapshot: skipped, only {snapshot_host()} writes Tasks/Board.html; --force for a one-off")
+            return 0
         out, written = export_snapshot(vault_name=args.vault_name)
         print("wrote:" if written else "unchanged:", out.relative_to(T.VAULT))
         return 0

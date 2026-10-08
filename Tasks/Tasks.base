@@ -20,9 +20,11 @@ properties:
   note.decision:
     displayName: Decision
   note.due:
-    displayName: Due
+    displayName: Deadline
+  note.when:
+    displayName: Planned
   note.owner:
-    displayName: Owner
+    displayName: Whose move
   note.depends-on:
     displayName: Depends on
   note.parent:
@@ -50,6 +52,7 @@ views:
       - parent
       - priority
       - effort
+      - when
       - due
       - depends-on
     sort:
@@ -60,7 +63,7 @@ views:
     columnSize:
       file.name: 575
   - type: table
-    name: Due
+    name: Deadlines
     filters:
       and:
         - note["task-status"] != "done"
@@ -87,10 +90,10 @@ views:
         - note["task-status"] != "dropped"
     order:
       - file.name
-      - due
+      - when
       - task-status
     sort:
-      - property: due
+      - property: when
         direction: ASC
   - type: table
     name: Done
@@ -117,6 +120,7 @@ views:
       - task-status
       - parent
       - priority
+      - when
       - due
       - depends-on
     sort:

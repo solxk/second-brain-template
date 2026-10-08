@@ -74,7 +74,7 @@
                              "hero hero hero hero hero list list list list list list list"
                              "capture capture capture capture capture list list list list list list list"
                              "gauge gauge gauge reminders reminders reminders folders folders folders folders folders folders"
-                             "decisions decisions decisions reminders reminders reminders folders folders folders folders folders folders"; }
+                             "waiting waiting waiting reminders reminders reminders folders folders folders folders folders folders"; }
   .app { grid-template-rows:auto auto auto 1fr auto auto; }       /* the brain-dump row takes the list's extra height, so it stays joined to the greeting */
   .side-reminders, .side-folders { align-self:stretch; }
   .side { display:contents; }
@@ -84,6 +84,6 @@
   .gaugecard { grid-area:gauge; min-height:280px; }
   .listcard { grid-area:list; }
   .side-reminders { grid-area:reminders; }
-  .side-decisions { grid-area:decisions; }
+  .side-waiting { grid-area:waiting; }
   .side-folders { grid-area:folders; }
 }

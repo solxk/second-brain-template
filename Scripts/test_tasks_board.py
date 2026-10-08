@@ -11,7 +11,7 @@ import sys
 import tempfile
 import threading
 import unittest
-from datetime import date
+from datetime import date, timedelta
 from unittest import mock
 from pathlib import Path
 
@@ -88,12 +88,11 @@ class Api(unittest.TestCase):
         fm, _ = T.parse_frontmatter((self.tmp / "Buy a new mouse.md").read_text())
         self.assertEqual(fm[T.STATUS], "inbox")
 
-    def test_add_duplicate_line_reports_error(self):
-        status, r = self.call("POST", "/api/add", {"lines": "Existing\nFresh one"})
+    def test_add_duplicate_line_is_rejected_with_the_line_as_typed(self):
+        status, r = self.call("POST", "/api/add", {"lines": "Existing  \nFresh one"})
         self.assertEqual(status, 200)
-        self.assertEqual(r["created"], ["Fresh one"])
-        self.assertEqual(len(r["errors"]), 1)
-        self.assertIn("Existing", r["errors"][0])
+        self.assertEqual(r, {"created": ["Fresh one"],
+                             "rejected": [{"line": "Existing  ", "error": "task already exists: Existing.md"}]})
 
     def test_update_changes_field_and_runs_sync(self):
         _, p = self.call("GET", "/api/tasks")
@@ -214,7 +213,7 @@ class ReviewFixesApi(Api):
         _, p = self.call("GET", "/api/tasks")
         version = p["tasks"][0]["version"]
         status, r = self.call("POST", "/api/update", {"name": "Existing", "version": version,
-                                                       "changes": {T.STATUS: "dropped"}})
+                                                       "changes": {T.STATUS: "dropped"}, "note": "not needed"})
         self.assertEqual(status, 200)
         self.assertEqual(r["task"][T.STATUS], "dropped")
         self.assertTrue((self.tmp / "Existing.md").exists())
@@ -232,14 +231,14 @@ class TemplatePass(unittest.TestCase):
         self.assertEqual(B.payload(self.tmp, self.today, labels={"project": "Project"})["labels"]["project"], "Project")
 
     def test_tree_leaves_reminders_out(self):
-        make(self.tmp, "Call the plumber", kind="reminder", due="2026-10-09")
+        make(self.tmp, "Call the plumber", kind="reminder", when="2026-10-09")
         make(self.tmp, "Fix the gutter")
         p = B.payload(self.tmp, self.today)
         self.assertEqual(p["tree"]["P"]["loose"], ["Fix the gutter"])
         self.assertEqual(p["views"]["reminders"], ["Call the plumber"])
 
     def test_snapshot_has_a_reminders_section(self):
-        make(self.tmp, "Call the plumber", kind="reminder", due="2026-10-09")
+        make(self.tmp, "Call the plumber", kind="reminder", when="2026-10-09")
         html = B.export_snapshot(self.tmp, self.today, out=self.tmp / "Board.html")[0].read_text()
         static = html.split('<main id="main">', 1)[1].split("</main>", 1)[0]
         self.assertIn(">Reminders<", static)
@@ -256,6 +255,107 @@ class TemplatePass(unittest.TestCase):
         make(self.tmp, "Something new")
         self.assertTrue(B.export_snapshot(self.tmp, self.today, out=out)[1])
         self.assertNotEqual(out.stat().st_mtime, 0)
+
+
+class TaskSystemPort(unittest.TestCase):
+    """The vault's task system changes of 2026-10-08, as the template has them."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.today = date(2026, 10, 6)
+
+    def test_payload_has_unplanned_and_rows_carry_carried(self):
+        make(self.tmp, "Hot", priority="high")
+        make(self.tmp, "Carried", when="2026-10-03")
+        make(self.tmp, "Planned", when="2026-10-06")
+        p = B.payload(self.tmp, self.today)
+        self.assertEqual(p["views"]["unplanned"], ["Hot"])
+        self.assertEqual(p["views"]["today"], ["Carried", "Planned"])
+        self.assertEqual({t["name"]: t["carried"] for t in p["tasks"]}, {"Hot": 0, "Carried": 3, "Planned": 0})
+
+    def test_payload_has_waiting_on_hold_and_claude_and_names_the_blocker(self):
+        make(self.tmp, "Watched", **{"waiting-on": ["The council"], "expecting": "the permit", "chase-after": "2026-10-01"})
+        make(self.tmp, "Theirs", owner="Dan", **{"chase-after": "2026-10-10"})
+        make(self.tmp, "Lease", status="todo")
+        make(self.tmp, "Held", status="blocked", **{"depends-on": ["[[Lease]]"]})
+        make(self.tmp, "Claude's", owner="Claude")
+        p = B.payload(self.tmp, self.today)
+        self.assertEqual((p["views"]["waiting"], p["views"]["onhold"], p["views"]["claude"]),
+                         (["Watched", "Theirs"], ["Held"], ["Claude's"]))
+        t = {x["name"]: x for x in p["tasks"]}
+        self.assertEqual((t["Watched"]["waiting-on"], t["Watched"]["expecting"]), (["The council"], "the permit"))
+        self.assertEqual(t["Held"]["held_by"], [{"name": "Lease", "title": "Lease", "status": "todo"}])
+        self.assertEqual((t["Theirs"]["mine"], t["Lease"]["mine"]), (False, True))
+
+    def test_snapshot_shows_start_here_and_both_dates(self):
+        make(self.tmp, "First", when="2026-10-04", due="2026-10-09", effort="deep")
+        html = B.export_snapshot(self.tmp, self.today, out=self.tmp / "Board.html")[0].read_text()
+        static = html.split('<main id="main">', 1)[1].split("</main>", 1)[0]
+        self.assertIn("Start here", static)
+        self.assertIn("Deadline 9 Oct", static)
+        self.assertIn("Carried 4 Oct", static)
+
+    def test_snapshot_host_names_the_one_computer_that_writes_it(self):
+        with mock.patch.object(T, "_config", return_value={}):
+            self.assertTrue(B.is_snapshot_host("anything"))                 # one computer: no setting needed
+        with mock.patch.object(T, "_config", return_value={"snapshot_host": "Sams-MacBook"}):
+            self.assertTrue(B.is_snapshot_host("sams-macbook.local"))
+            self.assertFalse(B.is_snapshot_host("SAMS-PC"))
+            code = None
+            out = io.StringIO()
+            with mock.patch.object(B, "is_snapshot_host", return_value=False), contextlib.redirect_stdout(out):
+                code = B.main(["export"])
+            self.assertEqual(code, 0)
+            self.assertIn("skipped, only Sams-MacBook writes", out.getvalue())
+
+
+class GuardsApi(unittest.TestCase):
+    """/api/update refuses what sync would undo, and a drop needs a reason. Borrows Api's server only."""
+    setUp, tearDown, call = Api.setUp, Api.tearDown, Api.call
+
+    def version(self, name):
+        _, p = self.call("GET", "/api/tasks")
+        return {t["name"]: t for t in p["tasks"]}[name]["version"]
+
+    def test_todo_on_a_blocked_task_is_400_naming_the_blocker(self):
+        make(self.tmp, "After", status="blocked", **{"depends-on": ["[[Existing]]"]})
+        before = (self.tmp / "After.md").read_text()
+        status, r = self.call("POST", "/api/update", {"name": "After", "version": self.version("After"),
+                                                       "changes": {T.STATUS: "todo"}})
+        self.assertEqual((status, r["error"]), (400, "blocked by Existing; finish it first"))
+        self.assertEqual((self.tmp / "After.md").read_text(), before)
+
+    def test_drop_without_a_note_is_400_and_with_one_is_logged(self):
+        status, r = self.call("POST", "/api/update", {"name": "Existing", "version": self.version("Existing"),
+                                                       "changes": {T.STATUS: "dropped"}})
+        self.assertEqual((status, r["error"]), (400, "say why in one line: --note ..."))
+        status, r = self.call("POST", "/api/update", {"name": "Existing", "version": self.version("Existing"),
+                                                       "changes": {T.STATUS: "dropped"}, "note": "done another way"})
+        self.assertEqual(status, 200)
+        self.assertIn(f"- {date.today().isoformat()} board: status todo → dropped; done another way", r["task"]["body"])
+
+
+class ChasedApi(unittest.TestCase):
+    """The Chased button, and the default chase date the board's sync writes."""
+    setUp, tearDown, call = Api.setUp, Api.tearDown, Api.call
+    version = GuardsApi.version
+
+    def test_chased_moves_the_chase_date_and_logs(self):
+        make(self.tmp, "Books", owner="Dan", **{"chase-after": "2026-10-01"})
+        status, r = self.call("POST", "/api/update", {"name": "Books", "version": self.version("Books"),
+                                                       "changes": {"chased": True}})
+        today = date.today()
+        self.assertEqual(status, 200)
+        self.assertEqual(r["task"]["chase-after"], (today + timedelta(days=T.CHASE_DAYS)).isoformat())
+        self.assertIn(f"- {today.isoformat()} board: chased\n", r["task"]["body"])
+
+    def test_handing_a_task_to_someone_gives_it_a_chase_date(self):
+        status, r = self.call("POST", "/api/update", {"name": "Existing", "version": self.version("Existing"),
+                                                       "changes": {"owner": "Dan"}})
+        today = date.today()
+        chase = (today + timedelta(days=T.CHASE_DAYS)).isoformat()
+        self.assertEqual((status, r["task"]["chase-after"]), (200, chase))
+        self.assertIn(f"- {today.isoformat()} sync: chase-after → {chase} (default)", r["task"]["body"])
 
 
 class Styles(unittest.TestCase):
