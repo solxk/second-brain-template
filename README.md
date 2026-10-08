@@ -44,7 +44,7 @@ PARA, with one change. In the original, a project is anything with a finish line
 | `Map.md` | Where everything lives. |
 | `CLAUDE.md` | The rules Claude follows in this folder. Short on purpose. |
 | `SETUP.md` | The setup Claude runs for you. |
-| `Scripts/` | The task board and two helpers. Python, nothing to install. |
+| `Scripts/` | The task board, its four styles, and two helpers. Python, nothing to install. |
 | `.claude/settings.json` | Pre-approves the folder's own scripts, so Claude doesn't ask every time. |
 
 **Tasks, goals and reminders.** A task is a piece of work. A goal is a finish line with tasks under it ("Sell the flat"). A reminder is a nudge on a date ("Call mum on Friday") and lives in its own list, so it doesn't clog the work. The test: if you'd want to know later that it was done and why, it's a task; if you only need not to forget it, it's a reminder.
@@ -65,6 +65,15 @@ Say "open the board", and Claude starts it and gives you http://127.0.0.1:8765/.
 - everything grouped by project and area.
 
 It runs while that Claude session is open. When the session closes, the board goes too, but your tasks are files and lose nothing.
+
+It comes in four styles. During setup Claude shows you your own board in each one and asks which you want; Show Your Working is the default, and you can switch any time by asking.
+
+| | |
+|---|---|
+| **Show Your Working**: engineering paper, graphite ink, one red-orange for whatever needs you. | **Warm Bento**: cream cards on taupe, an espresso card for what's in focus, orange for act now. |
+| ![Show Your Working](Scripts/board_styles/previews/working.jpg) | ![Warm Bento](Scripts/board_styles/previews/bento.jpg) |
+| **Aura**: frosted glass on periwinkle, a gradient arc that fills with the day, mint for done. | **Oracle**: a dark command centre with a morning briefing; blue for what Claude tells you, orange for what needs you. |
+| ![Aura](Scripts/board_styles/previews/aura.jpg) | ![Oracle](Scripts/board_styles/previews/oracle.jpg) |
 
 If the folder syncs to your phone (iCloud Drive, OneDrive, Dropbox, Google Drive), `Tasks/Board.html` is a read-only copy you can open there. It updates each time Claude syncs your tasks.
 

@@ -1,0 +1,62 @@
+/* Show Your Working: engineering paper, graphite ink, white sheets with hard shadows. The accent marks what needs you.
+   Desktop: a list rail on the left, then the date, the callout, the scratch pad and the numbered list. */
+:root {
+  --page-bg:#F1F5EC; --card:#FFFFFF; --card-2:#F1F5EC; --ink:#24282B; --muted:#565D62; --line:#C9D6BE;
+  --accent:#24282B; --on-accent:#FFFFFF; --signal:#C73E0E; --signal-wash:#FBE7DF; --signal-ink:#A3330A;
+  --cell-open:#24282B; --cell-done:#C9D6BE; --gauge-on:var(--signal);
+  --font-body:"Atkinson Hyperlegible Next", "Atkinson Hyperlegible", system-ui, sans-serif;
+  --font-display:var(--font-body); --font-label:"Atkinson Hyperlegible Mono", ui-monospace, Menlo, monospace;
+  --display-weight:800; --display-track:-0.03em; --label-track:.05em; --label-size:11px;
+  --r-card:4px; --r-row:4px; --r-ctl:4px; --r-check:3px;
+  --card-border:1.5px solid #24282B; --card-shadow:4px 4px 0 #24282B; --pad:20px;
+}
+body { background-image:linear-gradient(#DCE6D2 1px, transparent 1px), linear-gradient(90deg, #DCE6D2 1px, transparent 1px); background-size:16px 16px; }
+
+.top { background:#FAFCF7; border-bottom:1.5px solid var(--ink); margin:-14px -14px 0; padding:12px 14px; }
+.brand { flex-direction:column; align-items:flex-start; gap:6px; }
+.brand .name { font-size:20px; letter-spacing:-0.03em; line-height:1; }
+.brand .name::after { content:""; display:block; width:40px; height:4px; margin-top:6px; background:var(--signal); }
+.brand small { display:none; }
+#tabs button.on { background:var(--card); color:var(--ink); border:1.5px solid var(--ink); box-shadow:3px 3px 0 var(--ink); font-weight:800; }
+#tabs button.on .n { color:var(--signal); }
+.motto { font-weight:700; font-size:15px; line-height:1.35; }
+.motto span { color:var(--signal); }
+
+.hero, .listcard { padding:0; background:none; border:0; box-shadow:none; }
+.hero h1, .stats { display:none; }
+.summary { margin-top:8px; font-family:var(--font-label); font-size:12px; line-height:1.6; letter-spacing:.05em; text-transform:uppercase; color:var(--signal); max-width:none; }
+.summary b { color:var(--signal); font-weight:600; }
+.summary::before { content:""; display:inline-block; vertical-align:middle; margin:-2px 8px 0 0; width:34px; height:7px; background:radial-gradient(circle at 3.5px 3.5px, var(--signal) 3.5px, transparent 4px), linear-gradient(var(--signal), var(--signal)) 9px 50%/25px 1.5px no-repeat; }
+.capture .label { color:var(--signal); }
+#dump { border:0; padding:4px 0 6px; background:transparent; font-size:17px; resize:none; }
+#dump:focus { outline:none; }
+.capture:focus-within { outline:2px solid var(--signal); outline-offset:3px; }
+
+.viewhead { border-bottom:1.5px solid var(--ink); }
+#vtitle { font-size:clamp(44px, 6vw, 72px); line-height:.95; letter-spacing:-0.04em; }
+.filters select { border:1.5px solid var(--ink); }
+.task .t > :first-child { font-weight:700; }
+.chip { border-color:var(--line); background:var(--card); font-family:var(--font-label); font-size:11px; text-transform:uppercase; letter-spacing:.04em; border-radius:3px; }
+.chip.decision { border:1.5px solid var(--signal); background:var(--card); color:var(--signal); }
+.task.w-late .no { color:var(--signal); font-weight:600; }
+.folder { background:var(--card); border:1.5px solid var(--ink); }
+.seg button[aria-pressed=true] { box-shadow:2px 2px 0 var(--signal); }
+.btn.primary { box-shadow:3px 3px 0 var(--signal); }
+#panel { border-left:1.5px solid var(--ink); }
+
+@media (min-width: 761px) {
+  .app { max-width:none; margin:0; padding:0; min-height:100vh; display:grid; gap:0; align-items:start;
+         grid-template-columns:236px minmax(0, 1fr); grid-template-rows:auto auto auto 1fr;
+         grid-template-areas:"top banner" "top hero" "top capture" "top list"; }
+  .top { grid-area:top; position:sticky; top:0; height:100vh; margin:0; padding:32px 20px; flex-direction:column; flex-wrap:nowrap;
+         align-items:stretch; gap:28px; border-bottom:0; border-right:1.5px solid var(--ink); align-self:stretch; }
+  .brand .name { font-size:26px; }
+  #tabs { flex-direction:column; flex:0 0 auto; overflow:visible; gap:4px; }
+  #tabs button { justify-content:space-between; width:100%; border:1.5px solid transparent; color:var(--ink); font-size:15px; }
+  .stamp { display:none; }
+  .motto { display:block; margin-top:auto; }
+  .banner { grid-area:banner; margin:24px 48px 0; max-width:920px; }
+  .hero { grid-area:hero; margin:40px 48px 0; max-width:920px; }
+  .capture { grid-area:capture; margin:22px 48px 0; max-width:920px; }
+  .listcard { grid-area:list; margin:28px 48px 64px; max-width:920px; }
+}

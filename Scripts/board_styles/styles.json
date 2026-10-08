@@ -1,0 +1,33 @@
+{
+  "default": "working",
+  "styles": {
+    "working": {
+      "label": "Show Your Working",
+      "blurb": "Engineering paper, graphite ink, one red-orange for whatever needs you. Numbered lists, easy to read.",
+      "fonts": "https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;500;700;800&family=Atkinson+Hyperlegible+Mono:wght@400;500;600&display=swap",
+      "numbered": true
+    },
+    "bento": {
+      "label": "Warm Bento",
+      "blurb": "Cream cards on taupe, an espresso card for what's in focus, orange for act now. A week strip and a ring for the day.",
+      "fonts": "https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Figtree:wght@400;500;600&display=swap",
+      "gauge": "ticks",
+      "week": true,
+      "side": true
+    },
+    "aura": {
+      "label": "Aura",
+      "blurb": "Frosted glass on periwinkle, a gradient arc that fills with the day, mint for done.",
+      "fonts": "https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@800&family=Manrope:wght@400;500;600;700&display=swap",
+      "gauge": "arc",
+      "arc": ["#8F94F0", "#F2A0C0", "#F4D776", "#9EF0C8"],
+      "side": true
+    },
+    "oracle": {
+      "label": "Oracle",
+      "blurb": "A dark command centre. A morning briefing up top, blue for what Claude tells you, orange for what needs you.",
+      "fonts": "https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600&display=swap",
+      "side": true
+    }
+  }
+}

@@ -1,0 +1,75 @@
+/* Oracle: a dark command centre. The morning briefing sits in a bracketed frame; blue is what Claude tells you,
+   orange is what needs you. Desktop: a list rail on the left, briefing and list in the middle, summaries on the right. */
+:root {
+  --page-bg:#070B12; --card:#0C121C; --card-2:#111A28; --ink:#DCE6F2; --muted:#7F93AD; --line:#1C2738;
+  --accent:#5AA9FF; --on-accent:#070B12; --signal:#FF8A3D; --signal-wash:#2A1A10; --signal-ink:#FFA066;
+  --cell-open:#5AA9FF; --cell-late:#FF8A3D; --cell-done:#26344A; --gauge-off:#1C2738;
+  --scrim:rgba(0,0,0,.6); --toast:#DCE6F2; --on-toast:#070B12;
+  --font-body:"Hanken Grotesk", "Segoe UI", system-ui, sans-serif; --font-display:"Chakra Petch", "Arial Narrow", sans-serif; --font-label:"Chakra Petch", "Arial Narrow", sans-serif;
+  --display-weight:700; --display-case:uppercase; --display-track:.06em; --label-track:.14em; --label-size:11px;
+  --r-card:0; --r-row:0; --r-ctl:0; --r-check:50%;
+  --card-border:1px solid #1C2738; --pad:24px;
+  color-scheme:dark;
+}
+.hero { position:relative; }               /* the drawer is fixed already, which anchors its brackets too */
+.hero::before, #panel::before { content:""; position:absolute; inset:-1px; pointer-events:none;
+  --b:linear-gradient(var(--accent), var(--accent));
+  background:var(--b) top left/14px 2px, var(--b) top left/2px 14px, var(--b) top right/14px 2px, var(--b) top right/2px 14px,
+             var(--b) bottom left/14px 2px, var(--b) bottom left/2px 14px, var(--b) bottom right/14px 2px, var(--b) bottom right/2px 14px;
+  background-repeat:no-repeat; }
+.brand .name { font-family:var(--font-display); letter-spacing:.14em; font-size:17px; }
+.brand small { font-family:var(--font-label); font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); }
+#tabs button { font-family:var(--font-label); font-size:12px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--ink); }
+#tabs button.on { background:var(--card-2); color:var(--accent); box-shadow:inset 2px 0 0 var(--accent); }
+.stamp { font-family:var(--font-label); font-size:11px; letter-spacing:.14em; text-transform:uppercase; }
+.motto { font-family:var(--font-display); font-weight:700; font-size:13px; letter-spacing:.1em; text-transform:uppercase; line-height:1.5; }
+.motto span { color:var(--signal); }
+
+.hero .dateline { color:var(--accent); }
+.hero .dateline::before { content:"Morning briefing · "; }
+.hero h1 { display:none; }
+.summary { font-size:18px; line-height:1.5; color:var(--ink); max-width:60ch; }
+.summary b { color:var(--signal); }
+.stats { margin-top:18px; padding-top:14px; border-top:1px solid var(--line); gap:16px; }
+.stat { padding:0; background:none; }
+.stat b { font-size:34px; }
+.stat span { font-family:var(--font-label); font-size:10px; letter-spacing:.14em; text-transform:uppercase; }
+.capture .label { color:var(--accent); }
+#dump { background:var(--page-bg); border-color:var(--line); }
+.btn { font-family:var(--font-label); letter-spacing:.1em; text-transform:uppercase; font-size:13px; }
+
+.viewhead { border-bottom-color:var(--line); }
+#vtitle { font-size:22px; }
+.explain { font-size:14px; }
+.filters select { font-family:var(--font-label); font-size:12px; letter-spacing:.08em; text-transform:uppercase; background:var(--card-2); }
+.task { border-bottom-color:var(--line); }
+.task.w-late { background:linear-gradient(90deg, rgba(255,138,61,.08), transparent 60%); box-shadow:inset 2px 0 0 var(--signal); }
+.task input[type=checkbox] { border-color:var(--accent); background:transparent; }
+.task.w-late input[type=checkbox] { border-color:var(--signal); }
+.task input[type=checkbox]:checked { background-color:var(--accent); }
+.t > :first-child { font-weight:600; }
+.chip { font-family:var(--font-label); font-size:10px; letter-spacing:.1em; text-transform:uppercase; border-color:var(--line); }
+.chip.decision, .chip.goal, .chip.doing { background:#0F1A2A; color:var(--accent); border:1px solid #1F3350; }
+.folder { background:var(--card-2); }
+.seg button[aria-pressed=true] { background:var(--accent); }
+#panel { background:var(--card); }
+.body { background:#0F1A2A; border:1px solid #1F3350; }
+
+@media (min-width: 761px) {
+  .app { max-width:none; margin:0; padding:0; min-height:100vh; display:grid; gap:20px 28px; align-items:start;
+         grid-template-columns:236px minmax(0, 1fr) 320px; grid-template-rows:auto auto auto 1fr;
+         grid-template-areas:"top banner banner" "top hero hero" "top capture side" "top list side"; }
+  .top { grid-area:top; position:sticky; top:0; height:100vh; padding:32px 20px; flex-direction:column; flex-wrap:nowrap; align-items:stretch;
+         gap:28px; background:var(--card); border-right:1px solid var(--line); align-self:stretch; }
+  .brand { flex-direction:column; align-items:flex-start; gap:6px; }
+  #tabs { flex-direction:column; flex:0 0 auto; overflow:visible; }
+  #tabs button { justify-content:space-between; width:100%; min-height:42px; }
+  .stamp { display:none; }
+  .motto { display:block; margin-top:auto; }
+  .banner { grid-area:banner; margin:28px 32px 0 0; }
+  .hero { grid-area:hero; margin:28px 32px 0 0; }
+  .banner:not([hidden]) + .hero { margin-top:0; }
+  .capture { grid-area:capture; }
+  .listcard { grid-area:list; margin-bottom:64px; }
+  .side { grid-area:side; margin-right:32px; }
+}

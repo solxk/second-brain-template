@@ -5,6 +5,10 @@ Part of the Second Brain template. Run from the vault root:
 
   python3 Scripts/tasks_board.py serve [--host 127.0.0.1] [--port 8765]
   python3 Scripts/tasks_board.py export            # writes Tasks/Board.html, the read-only snapshot
+  python3 Scripts/tasks_board.py style [NAME]      # lists the board styles, or switches to one
+
+The board's look comes from Scripts/board_styles/: styles.json lists the styles, one .css file each.
+vault.json "board_style" picks one; /styles on the running board shows the owner's own tasks in every style.
 
 The server reads and writes task notes only through tasks.py. It listens on this computer only, unless --host
 says otherwise. Nothing here is meant for the public internet. Starting it while it is already running just says so.
@@ -20,6 +24,7 @@ import threading
 from datetime import date
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import parse_qs, urlsplit
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import tasks as T  # noqa: E402
@@ -27,6 +32,9 @@ import tasks as T  # noqa: E402
 HTML = Path(__file__).with_name("tasks_board.html")
 SNAPSHOT = T.TASKS_DIR / "Board.html"
 MARKER = "/*BOARD_DATA*/"
+STYLES_DIR = Path(__file__).with_name("board_styles")
+STYLE_MARKER = "<!--BOARD_STYLE-->"
+CONFIG = T.VAULT / "vault.json"
 WRITE_LOCK = threading.Lock()                    # one writer at a time: version check, write and sync together
 DEFAULT_LABELS = {"task": "Task", "project": "Goal", "reminder": "Reminder"}   # what the board calls each kind;
                                                  # vault.json "labels" overrides (e.g. {"project": "Project"})
@@ -83,6 +91,78 @@ def payload(folder: Path = T.TASKS_DIR, today: date | None = None, vault_name: s
     }
 
 
+def styles() -> dict:
+    """styles.json: {"default": name, "styles": {name: {"label", "blurb", "fonts", ...options for the page}}}.
+    A style counts only if its .css file is there too."""
+    data = json.loads((STYLES_DIR / "styles.json").read_text(encoding="utf-8"))
+    data["styles"] = {k: v for k, v in data["styles"].items() if (STYLES_DIR / f"{k}.css").is_file()}
+    return data
+
+
+def chosen_style(name: str | None = None) -> str:
+    """The style to show: `name` if it exists, else vault.json's "board_style", else the default."""
+    known = styles()
+    for candidate in (name, T._config().get("board_style")):
+        if candidate in known["styles"]:
+            return candidate
+    return known["default"]
+
+
+def style_block(name: str) -> str:
+    """What replaces STYLE_MARKER: the style's fonts, its CSS, and its options for the page's script."""
+    meta = styles()["styles"][name]
+    css = (STYLES_DIR / f"{name}.css").read_text(encoding="utf-8").replace("</", "<\\/")
+    options = {k: v for k, v in meta.items() if k not in ("label", "blurb", "fonts")}
+    options["name"] = name
+    fonts = ""
+    if meta.get("fonts"):
+        fonts = ('<link rel="preconnect" href="https://fonts.googleapis.com">'
+                 '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
+                 f'<link rel="stylesheet" href="{_esc(meta["fonts"])}">\n')
+    return f'{fonts}<style id="board-style">\n{css}</style>\n<script>window.BOARD_STYLE = {json.dumps(options)};</script>'
+
+
+def page(name: str | None = None) -> str:
+    return HTML.read_text(encoding="utf-8").replace(STYLE_MARKER, style_block(chosen_style(name)), 1)
+
+
+def styles_page() -> str:
+    """Every style side by side, each showing the owner's own board, so they can pick one."""
+    known = styles()
+    current = chosen_style()
+    cards = []
+    for name, meta in known["styles"].items():
+        tag = " · in use" if name == current else ""
+        cards.append(f'''<section><header><h2>{_esc(meta["label"])}<small>{tag}</small></h2><p>{_esc(meta["blurb"])}</p></header>
+<div class="frames"><div class="desk"><iframe src="/?style={name}" title="{_esc(meta["label"])} on a computer" loading="lazy"></iframe></div>
+<div class="phone"><iframe src="/?style={name}" title="{_esc(meta["label"])} on a phone" loading="lazy"></iframe></div></div>
+<p class="say">To choose it, tell Claude: <b>use {_esc(meta["label"])}</b></p></section>''')
+    return f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Board styles</title><style>
+body{{margin:0;background:#EEEEEA;color:#1d1d1b;font:16px/1.45 -apple-system,"Segoe UI",system-ui,sans-serif}}
+main{{max-width:1500px;margin:0 auto;padding:32px 20px 64px}} h1{{margin:0;font-size:32px}} main>p{{margin:6px 0 28px;color:#5f5f5a}}
+.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,660px),1fr));gap:24px}}
+section{{background:#fff;border:1px solid #deded8;border-radius:14px;padding:20px;min-width:0}} h2{{margin:0;font-size:20px}} h2 small{{color:#5f5f5a;font-weight:500;font-size:14px}}
+header p{{margin:4px 0 16px;color:#5f5f5a;font-size:15px}} .frames{{display:flex;gap:14px;align-items:flex-start;overflow:hidden}}
+.desk{{flex:none;width:480px;height:330px;overflow:hidden;border:1px solid #deded8;border-radius:8px}} .desk iframe{{width:1280px;height:880px;border:0;transform:scale(.375);transform-origin:0 0}}
+.phone{{flex:none;width:146px;height:316px;overflow:hidden;border:1px solid #deded8;border-radius:14px}} .phone iframe{{width:390px;height:844px;border:0;transform:scale(.375);transform-origin:0 0}}
+.say{{margin:14px 0 0;font-size:15px}} iframe{{pointer-events:none}}
+</style></head><body><main><h1>Pick a style for your board</h1><p>Each one shows your own tasks. The style only changes how the board looks; your tasks stay the same.</p>
+<div class="grid">{"".join(cards)}</div></main></body></html>'''
+
+
+def set_style(name: str, config: Path = CONFIG) -> str:
+    """Record the owner's choice in vault.json. Returns the style's label; raises ValueError for an unknown name."""
+    known = styles()["styles"]
+    match = next((k for k, v in known.items() if name.lower() in (k, v["label"].lower())), None)
+    if match is None:
+        raise ValueError(f"no style called {name!r}. The styles are: " + ", ".join(f"{k} ({v['label']})" for k, v in known.items()))
+    data = json.loads(config.read_text(encoding="utf-8")) if config.is_file() else {}
+    data["board_style"] = match
+    config.write_text(json.dumps(data) + "\n", encoding="utf-8")
+    return known[match]["label"]
+
+
 class Handler(BaseHTTPRequestHandler):
     folder: Path = T.TASKS_DIR
     vault_name: str | None = None
@@ -107,9 +187,12 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         if not self._host_ok():
             return
-        if self.path == "/":
-            return self._send(200, HTML.read_text(encoding="utf-8"), "text/html")
-        if self.path.split("?")[0] == "/api/tasks":
+        url = urlsplit(self.path)
+        if url.path == "/":
+            return self._send(200, page((parse_qs(url.query).get("style") or [None])[0]), "text/html")
+        if url.path == "/styles":
+            return self._send(200, styles_page(), "text/html")
+        if url.path == "/api/tasks":
             return self._send(200, payload(self.folder, vault_name=self.vault_name))
         self._send(404, {"error": "not found"})
 
@@ -175,17 +258,24 @@ def _chips(t: dict, today: str) -> str:
     out = []
     if t.get("due"):
         late = t["due"] < today
-        out.append(f'<span class="chip {"overdue" if late else ""}">{"overdue " if late else "due "}{_esc(t["due"])}</span>')
+        try:
+            d = date.fromisoformat(t["due"])
+            shown = f"{d.day} {d:%b}"
+        except ValueError:
+            shown = t["due"]
+        out.append(f'<span class="chip {"overdue" if late else ""}">{"Overdue · " if late else "Due "}{_esc(shown)}</span>')
     if t.get("priority") == "high":
-        out.append('<span class="chip high">high</span>')
-    if t.get("effort"):
-        out.append(f'<span class="chip {_esc(t["effort"])}">{_esc(t["effort"])}</span>')
+        out.append('<span class="chip high">High priority</span>')
     if t.get("decision"):
-        out.append('<span class="chip">decision</span>')
-    if t.get(T.STATUS) in ("blocked", "doing"):
-        out.append(f'<span class="chip">{t[T.STATUS]}</span>')
+        out.append('<span class="chip decision">Decision</span>')
+    if t.get(T.STATUS) == "doing":
+        out.append('<span class="chip doing">In progress</span>')
+    if t.get(T.STATUS) == "blocked":
+        out.append('<span class="chip">Blocked</span>')
+    if t.get("effort"):
+        out.append(f'<span class="chip {_esc(t["effort"])}">{_esc(str(t["effort"]).capitalize())}</span>')
     if t.get("owner") and t["owner"] != T.OWNER:
-        out.append(f'<span class="chip">{_esc(t["owner"])}</span>')
+        out.append(f'<span class="chip">With {_esc(t["owner"])}</span>')
     return "".join(out)
 
 
@@ -225,7 +315,7 @@ def export_snapshot(folder: Path = T.TASKS_DIR, today: date | None = None, out: 
     with WRITE_LOCK:
         data = payload(folder, today, vault_name)
     blob = json.dumps(data).replace("</", "<\\/")
-    html = (HTML.read_text(encoding="utf-8")
+    html = (page()
             .replace(MARKER, f"window.BOARD_DATA = {blob};")
             .replace('<main id="main"></main>', f'<main id="main">{static_html(data)}</main>', 1))
     if out.is_file() and out.read_text(encoding="utf-8") == html:
@@ -256,7 +346,23 @@ def main(argv=None) -> int:
     s.add_argument("--vault-name", default=None, help="Obsidian vault name for open links (default: vault.json, else the folder name)")
     e = sub.add_parser("export")
     e.add_argument("--vault-name", default=None)
+    st = sub.add_parser("style", help="list the board styles, or switch to one")
+    st.add_argument("name", nargs="?")
     args = ap.parse_args(argv)
+    if args.cmd == "style":
+        if not args.name:
+            current = chosen_style()
+            for k, v in styles()["styles"].items():
+                print(f"{'*' if k == current else ' '} {k:<8} {v['label']}: {v['blurb']}")
+            return 0
+        try:
+            label = set_style(args.name)
+        except ValueError as err:
+            print(err)
+            return 1
+        export_snapshot()
+        print(f"Board style: {label}. Reload the board to see it.")
+        return 0
     if args.cmd == "export":
         out, written = export_snapshot(vault_name=args.vault_name)
         print("wrote:" if written else "unchanged:", out.relative_to(T.VAULT))

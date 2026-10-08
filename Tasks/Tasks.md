@@ -55,9 +55,12 @@ python3 Scripts/tasks.py sync                                                   
 python3 Scripts/tasks.py brief
 python3 Scripts/tasks.py list [--project X] [--status Y]
 python3 Scripts/tasks_board.py serve
+python3 Scripts/tasks_board.py style [name]                                        # list the board styles, or switch
 ```
 
 Start the board in the background and give the owner http://127.0.0.1:8765/. It runs while this session is open. If it's already running, it says so.
+
+If the owner wants the board to look different, give them http://127.0.0.1:8765/styles, which shows their own tasks in every style, then switch with `style <name>`. The choice is saved in `vault.json` as `board_style`.
 
 ## Board
 

@@ -140,6 +140,8 @@ Then add two reminders of your own, and tell them why:
    - Board, with Decisions next to it.
 
    Say that it runs while this session is open, and that "open the board" in any session brings it back.
+
+   Then let them choose how it looks. Give them http://127.0.0.1:8765/styles: it shows their own board in each of the four styles, on a computer and on a phone. When they pick one, run `python3 Scripts/tasks_board.py style <name>` and ask them to reload the board. Show Your Working is already set, so if they don't mind, move on. Tell them they can change it any time by asking.
 3. Explain the two rituals in plain words:
    - At the start of a session, Claude briefs them.
    - At the end, they say "what did we decide?" or "wrap up", and Claude writes down what changed and what's next.

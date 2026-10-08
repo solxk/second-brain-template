@@ -12,6 +12,7 @@ import tempfile
 import threading
 import unittest
 from datetime import date
+from unittest import mock
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -69,6 +70,16 @@ class Api(unittest.TestCase):
         status, p = self.call("GET", "/api/tasks")
         self.assertEqual(status, 200)
         self.assertEqual([t["name"] for t in p["tasks"]], ["Existing"])
+
+    def test_preview_and_styles_page(self):
+        status, html = self.call("GET", "/?style=bento")
+        self.assertEqual(status, 200)
+        self.assertIn('"name": "bento"', html)
+        status, html = self.call("GET", "/styles")
+        self.assertEqual(status, 200)
+        for name, meta in B.styles()["styles"].items():
+            self.assertIn(f'src="/?style={name}"', html)
+            self.assertIn(meta["label"], html)
 
     def test_add_lines_become_inbox_tasks(self):
         status, r = self.call("POST", "/api/add", {"lines": "Buy a new mouse\n\n   \nCall the bank: ask about fees\n"})
@@ -245,6 +256,44 @@ class TemplatePass(unittest.TestCase):
         make(self.tmp, "Something new")
         self.assertTrue(B.export_snapshot(self.tmp, self.today, out=out)[1])
         self.assertNotEqual(out.stat().st_mtime, 0)
+
+
+class Styles(unittest.TestCase):
+    """The board's look comes from board_styles/; vault.json picks one, and /styles shows them all."""
+
+    def test_every_listed_style_is_complete(self):
+        raw = json.loads((B.STYLES_DIR / "styles.json").read_text())
+        self.assertIn(raw["default"], raw["styles"])
+        for name, meta in raw["styles"].items():
+            self.assertTrue((B.STYLES_DIR / f"{name}.css").is_file(), name)
+            self.assertTrue(meta.get("label") and meta.get("blurb"), name)
+
+    def test_page_carries_the_chosen_style(self):
+        with mock.patch.object(T, "_config", return_value={}):
+            html = B.page()
+        self.assertNotIn(B.STYLE_MARKER, html)
+        self.assertIn('window.BOARD_STYLE = {', html)
+        self.assertIn('"name": "working"', html)            # the default
+        with mock.patch.object(T, "_config", return_value={"board_style": "aura"}):
+            self.assertIn('"name": "aura"', B.page())
+            self.assertIn('"name": "oracle"', B.page("oracle"))   # a preview overrides the saved choice
+            self.assertIn('"name": "aura"', B.page("nonsense"))   # an unknown name falls back to the saved one
+
+    def test_set_style_keeps_the_rest_of_vault_json(self):
+        cfg = Path(tempfile.mkdtemp()) / "vault.json"
+        cfg.write_text(json.dumps({"owner": "Sam", "setup": "done"}))
+        self.assertEqual(B.set_style("Warm Bento", cfg), "Warm Bento")     # the label works as well as the name
+        self.assertEqual(json.loads(cfg.read_text()), {"owner": "Sam", "setup": "done", "board_style": "bento"})
+        with self.assertRaises(ValueError):
+            B.set_style("purple", cfg)
+
+    def test_snapshot_carries_the_style(self):
+        tmp = Path(tempfile.mkdtemp())
+        make(tmp, "Something")
+        with mock.patch.object(T, "_config", return_value={"board_style": "oracle"}):
+            html = B.export_snapshot(tmp, date(2026, 10, 6), out=tmp / "Board.html")[0].read_text()
+        self.assertIn('"name": "oracle"', html)
+        self.assertIn("window.BOARD_DATA = {", html)
 
 
 class SecondStart(unittest.TestCase):

@@ -1,0 +1,89 @@
+/* Warm Bento: cream cards on a taupe ground, an espresso card for what's in focus, orange for act now.
+   Desktop: greeting and brain dump on the left with the day's ring, the list beside them, summaries underneath. */
+:root {
+  --page-bg:#ABA496; --card:#F4EFE9; --card-2:#E9E2D8; --ink:#2A2422; --muted:#6F655E; --line:#DDD4C8;
+  --accent:#2E2826; --on-accent:#F4EFE9; --signal:#E8952A; --signal-wash:#F6E2C8; --signal-ink:#8F4A14;
+  --cell-open:#F4EFE9; --cell-late:#E8952A; --cell-done:#5A4F4A; --gauge-off:#DDD4C8; --gauge-on:#E8952A;
+  --font-body:Figtree, "Segoe UI", system-ui, sans-serif; --font-display:Archivo, "Arial Narrow", sans-serif; --font-label:var(--font-body);
+  --display-weight:800; --display-case:uppercase; --display-track:-0.01em; --label-track:.08em;
+  --r-card:36px; --r-row:22px; --r-ctl:999px; --r-check:50%;
+  --card-border:none; --pad:32px;
+}
+.brand .name { font-size:20px; }
+.brand small { display:none; }
+#tabs { flex:0 1 auto; padding:6px; border-radius:999px; background:var(--card); }
+#tabs button { color:var(--ink); }
+#tabs button.on .n { min-width:22px; height:22px; padding:0 7px; display:grid; place-items:center; border-radius:999px; background:var(--signal); color:var(--ink); font-weight:700; opacity:1; }
+.stamp { margin-left:auto; padding:9px 16px; border-radius:999px; background:var(--card); color:var(--ink); font-weight:500; }
+
+.hero, .capture { background:#2E2826; color:#F4EFE9; }
+.hero .dateline, .capture .label, .capture .hint { color:#B9AEA6; }
+.hero h1 { font-size:clamp(36px, 4.4vw, 54px); line-height:.98; }
+.summary { color:#E3DBD2; font-size:16px; }
+.summary b { color:#FFFFFF; }
+.stat { background:#3B3431; border-radius:22px; }
+.stat span { color:#B9AEA6; }
+.stat.alert { background:var(--signal); color:var(--ink); }
+.stat.alert b { color:var(--ink); }
+.stat.alert span { color:var(--ink); }
+.stat.zero b { opacity:.5; }
+.dumprow { align-items:center; padding:6px 6px 6px 22px; border-radius:999px; background:#3B3431; }
+#dump { border:0; background:transparent; color:#F4EFE9; padding:12px 0; min-height:44px; resize:none; }
+#dump::placeholder { color:#B9AEA6; }
+#dump:focus { outline:none; }
+.dumprow:focus-within { outline:2px solid var(--signal); outline-offset:2px; }
+.dumprow .btn { width:48px; min-height:48px; padding:0; border-radius:50%; background:var(--signal); color:var(--ink); }
+.dumprow .btn span { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
+
+.viewhead { border-bottom:0; }
+#vtitle { font-size:32px; }
+.filters select { border:0; background:var(--card-2); }
+.filters select.set { background:var(--accent); color:var(--on-accent); }
+.week { margin:4px 0 16px; }
+.day.on .num { background:var(--accent); }
+.task { align-items:center; margin-bottom:8px; padding:10px 22px 10px 12px; border:0; border-radius:999px; background:var(--card-2); }
+.task.sub { margin-left:24px; padding-left:12px; }
+.task input[type=checkbox] { width:28px; height:28px; border:0; background:#2E2826; }
+.task.w-late input[type=checkbox] { background:var(--signal); }
+.task input[type=checkbox]:checked { background-color:#6F655E; }
+.t > :first-child { font-weight:500; }
+.when { padding-top:0; }
+.when.late { color:var(--signal-ink); }
+.chip { border-color:#D3C9BC; }
+.chip.decision { background:var(--card); border:1px solid #D3C9BC; }
+.chip.high, .chip.overdue { background:var(--signal); color:var(--ink); }
+.folder { background:var(--card-2); border-radius:28px; }
+.folder .task { background:var(--card); }
+.project { border-bottom:0; }
+
+.side-folders { background:#2E2826; color:#F4EFE9; }
+.side-folders h3 small, .side-folders .fold small, .side-folders .fold .row span:last-child { color:#B9AEA6; }
+.side-folders .fold { border-bottom-color:#443B37; }
+.cells { height:10px; gap:4px; }
+.cell { border-radius:999px; }
+.rem { border-bottom-color:#E3DBD0; }
+.rem.late > :first-child { color:var(--signal-ink); }
+.seg button[aria-pressed=true] { background:#2E2826; }
+#panel { border-radius:0; }
+@media (max-width: 760px) { .dumprow { flex-direction:row; align-items:center; } .task { border-radius:26px; padding:12px 16px 12px 12px; } }
+
+@media (min-width: 761px) {
+  .app { display:grid; align-items:start; grid-template-columns:repeat(12, minmax(0, 1fr));
+         grid-template-areas:"top top top top top top top top top top top top"
+                             "banner banner banner banner banner banner banner banner banner banner banner banner"
+                             "hero hero hero hero hero list list list list list list list"
+                             "capture capture capture capture capture list list list list list list list"
+                             "gauge gauge gauge reminders reminders reminders folders folders folders folders folders folders"
+                             "decisions decisions decisions reminders reminders reminders folders folders folders folders folders folders"; }
+  .app { grid-template-rows:auto auto auto 1fr auto auto; }       /* the brain-dump row takes the list's extra height, so it stays joined to the greeting */
+  .side-reminders, .side-folders { align-self:stretch; }
+  .side { display:contents; }
+  .top { grid-area:top; } .banner { grid-area:banner; }
+  .hero { grid-area:hero; border-radius:36px 36px 0 0; padding-bottom:12px; }
+  .capture { grid-area:capture; margin-top:calc(var(--gap) * -1); border-radius:0 0 36px 36px; padding-top:20px; }
+  .gaugecard { grid-area:gauge; min-height:280px; }
+  .listcard { grid-area:list; }
+  .side-reminders { grid-area:reminders; }
+  .side-decisions { grid-area:decisions; }
+  .side-folders { grid-area:folders; }
+}
