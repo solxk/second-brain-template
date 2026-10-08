@@ -67,7 +67,7 @@ The day's limit comes from `Me.md`. If it doesn't say, the limit is two deep, tw
   3. anything in progress;
   4. the high-priority ones from Not planned yet.
 
-  Put the rest on one line, "Left for another day". Give clock-time blocks only when a calendar is connected and `Me.md` says they want them. Without that, label the plan with the parts of the day `Me.md` names ("morning", "9 to 1", "before football"). Deep work goes in the hours they said they're sharpest, medium and quick work after, around busy times.
+  Put the rest on one line, "Left for another day". Give clock-time blocks only when a calendar is connected and `Me.md` says they want them. Without that, label the plan with the parts of the day `Me.md` names ("morning", "9 to 1", "before football"). Plan inside the work day `Me.md` describes: nothing before it starts, over a break or after it stops. Deep work goes in the hours they said they're sharpest, medium and quick work after, around busy times. If the plan won't fit before they stop, treat it as over the limit and suggest what to leave.
 - **Decisions:** a decision in the plan gets no time slot.
 - **Start here:** the plan's first task, with the first thing to do as one concrete action ("open the contract and read clause 4", not "work on the contract").
 

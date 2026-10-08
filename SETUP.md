@@ -36,7 +36,7 @@ Who they are:
 3. What would you like to have done a year from now, in a sentence?
 
 How they work:
-4. When does your work day start, and when are you sharpest?
+4. What does your work day look like: when do you start, when are you sharpest, when do you take breaks, and when do you stop? (The big focused jobs go in the sharpest hours, and nothing gets planned over a break or after the stop. If a day runs differently, "Tuesdays I'm at the lab", note it. If they don't keep set hours, write down the shape they give, "mornings, after the school run".)
 5. What usually trips you up? (Starting, finishing, deciding, remembering, saying no.)
 6. What do you want from an AI partner: pushing you, keeping you organised, thinking things through with you, doing the admin?
 7. Should it be direct with you, or gentle?
@@ -72,7 +72,7 @@ I'm <name>. <Two or three sentences on what they do, in words that will still be
 <The one-year sentence.>
 
 ## How I work
-<Day shape, when they're sharpest.>
+<Their work day in their words, with the times they gave: when it starts, when they're sharpest, their breaks, when it stops, and any day that runs differently.>
 
 ## What trips me up
 <Their answer, plainly.>
