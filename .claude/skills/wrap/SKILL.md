@@ -5,7 +5,7 @@ description: Use when the owner types /wrap or asks for it ("what did we decide?
 
 # Wrap
 
-The end of a session or a day. Its job: everything decided is written down where it belongs, so the next session starts briefed, and tomorrow's first task is named tonight. Run every command from the folder's top level, with the Python command `vault.json` records (`python3` below).
+The end of a session or a day. Its job: everything decided is written down where it belongs, so the next session starts briefed, and tomorrow's first task is named tonight. Run every command from the folder's top level, with the Python command `vault.json` records for this kind of computer (`python3` below; the brief explains the per-computer entry).
 
 Read the "Starting and ending the day" section of `Me.md` first. It says what the owner wants asked at the end, and whether to plan tomorrow now or leave it to the morning. Their words win over the defaults below. If they want it done differently, suggest the change to that section; edit `Me.md` only when they ask you to.
 
@@ -57,7 +57,7 @@ python3 Scripts/tasks.py sync
 python3 Scripts/check_wiki_links.py
 ```
 
-Fix any broken links (links into `Archive/` are fine). If this folder is a git repo, commit with `git add -A`, then `git commit -m "Wrap <YYYY-MM-DD>: <what moved>"`.
+Fix any broken links (links into `Archive/` are fine). If the folder syncs between two computers, end with one line: let the sync finish before shutting the laptop. If this folder is a git repo, commit with `git add -A`, then `git commit -m "Wrap <YYYY-MM-DD>: <what moved>"`.
 
 ## 5. What they see
 

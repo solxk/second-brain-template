@@ -12,7 +12,7 @@ Before any questions:
   - On a fresh Mac, the first `python3` may open an Apple pop-up offering to install developer tools. Tell the owner to click Install, wait a few minutes, then carry on.
   - On Windows the working command is usually `python`. A `python3` stub there opens the Microsoft Store; ignore it.
   - If none works, tell the owner to install Python from python.org with "Add to PATH" ticked, then come back.
-  - Use whichever command worked for every command below and in every session, and store it in `vault.json` as `"python"`.
+  - Use whichever command worked for every command below. Store it in `vault.json` under `"python"`, keyed by this kind of computer: `{"darwin": "python3"}` on a Mac, `{"windows": "python"}` on Windows. Keep any entry already there for the other kind: a folder shared by a Mac and a PC syncs `vault.json` between them, and each needs its own command. The `/brief` skill checks it again at every arrival.
 - **Run the tests**: `python3 -m unittest Scripts/test_tasks.py Scripts/test_tasks_board.py Scripts/test_check_wiki_links.py`. They should end with `OK`.
 - **Explain the permission prompts** in one line. Claude asks before running commands; this folder's own scripts are pre-approved in `.claude/settings.json`, and edits inside the folder go through without asking. The pre-approvals only work once the owner has said yes to "do you trust this folder?". If every script run asks for permission, that's why: tell them to reopen the folder and accept it.
 - **Ask whether Obsidian is installed.** It isn't required: the board shows the tasks either way.
@@ -24,7 +24,7 @@ Before any questions:
 
 About twenty minutes. Ask one question at a time, in plain words, with no jargon. Follow up when an answer is thin; move on when it's enough. Ask about anything ambiguous ("the 18th" of which month?) rather than guess.
 
-Append each answer to `Inbox/Setup notes.md` the moment it's given, before you ask the next question. On a resume, read that file first and pick up at the first question without an answer.
+Append each answer to `Inbox/Setup notes.md` the moment it's given, before you ask the next question. On a resume, read that file first and pick up at the first question without an answer. A setup started on one computer can finish on another that shares the folder: the notes and the step number sync with it (check Python on the new computer first, as in step 0).
 
 Before question 1, ask their first name, as they'd write it, and put it at the top of `Inbox/Setup notes.md`: `Me.md` opens with it and `vault.json` needs it.
 
@@ -169,9 +169,10 @@ Then add two reminders of your own, and tell them why:
 4. Read this folder's path yourself, and tell them in one line what it's in: iCloud Drive, OneDrive, Dropbox, Google Drive, or none of them. Don't ask them; if they don't know, the path does. Read it from the shell (`pwd`), and say only what that shows; never state a path you didn't read. If you can't read it, say so and ask them to check where the folder sits. Then explain the phone:
    - capture goes to the Phone list (step 4), or gets pasted in later;
    - if the path shows the folder syncs to their phone, `Tasks/Board.html` is a read-only copy of the board. If two computers share the folder, ask which one should write that copy, and set `"snapshot_host"` in `vault.json` to its name (run `hostname` on it); otherwise the sync service makes conflict copies of it.
-5. Explain backup in one line: it's a folder, so back it up like any other. If the path is in iCloud Drive, OneDrive, Dropbox or Google Drive, it's already copied; if it isn't, say plainly there's no phone copy and no backup yet, and offer one next step. If they ever want a history of every change, it can become a git repo, and Claude will commit at the end of each session.
-6. Delete `Inbox/Setup notes.md` and set `"setup": "done"` in `vault.json`.
-7. End by saying what to try tomorrow: open a session and say "what's on today?".
+5. If the folder is in Google Drive, OneDrive or Dropbox, check it's kept fully on the computer: Google Drive for desktop set to **Mirror files**, not Stream; not "online-only" in OneDrive or Dropbox. Streamed files make the task scripts slow or show them a placeholder. If two computers share the folder, say once: let the sync finish before shutting the laptop, or the other one starts from an old copy.
+6. Explain backup in one line: it's a folder, so back it up like any other. If the path is in iCloud Drive, OneDrive, Dropbox or Google Drive, it's already copied; if it isn't, say plainly there's no phone copy and no backup yet, and offer one next step. If they ever want a history of every change, it can become a git repo, and Claude will commit at the end of each session.
+7. Delete `Inbox/Setup notes.md` and set `"setup": "done"` in `vault.json`.
+8. End by saying what to try tomorrow: open a session and say "what's on today?".
 
 ## What not to do
 

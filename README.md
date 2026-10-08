@@ -77,7 +77,7 @@ It comes in four styles. During setup Claude shows you your own board in each on
 | **Aura**: frosted glass on periwinkle, a gradient arc that fills with the day, mint for done. | **Oracle**: a dark command centre with a morning briefing; blue for what Claude tells you, orange for what needs you. |
 | ![Aura](Scripts/board_styles/previews/aura.jpg) | ![Oracle](Scripts/board_styles/previews/oracle.jpg) |
 
-If the folder syncs to your phone (iCloud Drive, OneDrive, Dropbox, Google Drive), `Tasks/Board.html` is a read-only copy you can open there. It updates each time Claude syncs your tasks. If two computers share the folder, Claude sets one of them to write it, so the sync service doesn't make conflict copies.
+If the folder syncs to your phone (iCloud Drive, OneDrive, Dropbox, Google Drive), `Tasks/Board.html` is a read-only copy you can open there. It updates each time Claude syncs your tasks. With two computers on one folder, let the sync finish before you shut the laptop: wait for the Google Drive, OneDrive, Dropbox or iCloud icon to say it's up to date. Otherwise the other computer starts from an old copy, and the sync service keeps both versions as a "(1)" conflict copy. If two computers share the folder, Claude sets one of them to write it, so the sync service doesn't make conflict copies.
 
 ### Words on the board
 
@@ -98,7 +98,7 @@ If the folder syncs to your phone (iCloud Drive, OneDrive, Dropbox, Google Drive
 
 ## Backup and history
 
-It's a folder, so back it up the way you back up anything else. If it lives in iCloud Drive, OneDrive, Dropbox or Google Drive, it's already copied. If you'd like a history of every change, make it a git repo; Claude will commit at the end of each session.
+It's a folder, so back it up the way you back up anything else. If it lives in iCloud Drive, OneDrive, Dropbox or Google Drive, it's already copied. Keep it fully on the computer: in Google Drive for desktop choose **Mirror files**, not Stream files, and don't make the folder "online-only" in OneDrive (Files On-Demand) or Dropbox. Streamed files are fetched one by one when opened, so the task scripts, which read every note, run slowly or see a placeholder instead of the file. If you'd like a history of every change, make it a git repo; Claude will commit at the end of each session.
 
 ## Made by
 

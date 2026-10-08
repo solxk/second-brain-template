@@ -5,7 +5,7 @@ description: Use when the owner types /brief, opens a session in this folder, or
 
 # Brief
 
-The morning brief: one short message that makes the first thing to do need no decisions. Run every command from the folder's top level, with the Python command `vault.json` records (`python3` below).
+The morning brief: one short message that makes the first thing to do need no decisions. Run every command from the folder's top level, with the Python command `vault.json` records for this kind of computer (`python3` below). `"python"` is kept per platform (`{"darwin": "python3", "windows": "python"}`), because two computers sharing the folder sync the file. If there's no entry for this computer, or the command fails, try `python3 --version`, then `python --version`, then `py --version`, use the first that works, and add it under this computer's key (`darwin` or `windows`), keeping the other's. An older single value (`"python": "python3"`) is only a hint.
 
 Read `Map.md`, then `Me.md` first. The "Starting and ending the day" section in `Me.md` says what the owner wants in the brief, how much a day should hold, and whether the plan goes on their calendar. Their words win over the defaults below. If they want it done differently, suggest the change to that section; edit `Me.md` only when they ask you to.
 
@@ -53,6 +53,8 @@ Then file To sort: `python3 Scripts/tasks.py list --status inbox`.
 - **Two plausible folders:** it stays in To sort and goes under "File these?" with your guess.
 
 If `Inbox/` holds anything, count it and offer to file it after the brief.
+
+**Sync conflict copies:** look for notes with a conflict copy beside them ("Name (1).md", or a name with "conflict" in it), usually from two computers editing before the sync finished. For each, merge what the copy adds into the original, keep the original name, delete the copy, and say so on the brief's last line.
 
 ## 4. The plan
 

@@ -1060,5 +1060,27 @@ class Readability(unittest.TestCase):
         self.assertEqual(T.ARCHIVE_DAYS, 7)
 
 
+
+class PythonPerComputer(unittest.TestCase):
+    """vault.json syncs between computers, so the Python command is kept per platform."""
+
+    def test_dict_valued_python_is_read_for_this_platform(self):
+        cfg = {"python": {"darwin": "python3", "windows": "python"}}
+        self.assertEqual(T.python_command(cfg, "darwin"), "python3")
+        self.assertEqual(T.python_command(cfg, "win32"), "python")       # sys.platform's name for Windows
+
+    def test_unknown_or_missing_platform_falls_back_to_finding_it_again(self):
+        self.assertIsNone(T.python_command({"python": {"darwin": "python3"}}, "win32"))
+        self.assertIsNone(T.python_command({"python": {"darwin": "python3"}}, "linux"))
+        self.assertIsNone(T.python_command({}, "darwin"))
+        self.assertIsNone(T.python_command({"python": {"windows": "  "}}, "win32"))
+
+    def test_the_old_single_string_is_still_read(self):
+        self.assertEqual(T.python_command({"python": "python3"}, "darwin"), "python3")
+
+    def test_platform_names(self):
+        self.assertEqual([T.platform_key(p) for p in ("darwin", "win32", "cygwin", "linux")],
+                         ["darwin", "windows", "windows", "linux"])
+
 if __name__ == "__main__":
     unittest.main()

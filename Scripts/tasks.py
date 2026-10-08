@@ -45,6 +45,28 @@ def _config() -> dict:
         return {}
 
 
+def platform_key(platform: str | None = None) -> str:
+    """This kind of computer, as vault.json's "python" names it: "darwin" (Mac), "windows" or "linux"."""
+    p = (platform or sys.platform).lower()
+    if p.startswith("win") or p in ("cygwin", "msys"):
+        return "windows"
+    return "linux" if p.startswith("linux") else p
+
+
+def python_command(config: dict | None = None, platform: str | None = None) -> str | None:
+    """The Python command vault.json records for this kind of computer. A folder shared by two computers
+    syncs vault.json between them, so "python" is kept per platform: {"darwin": "python3", "windows": "python"}.
+    The old single string ("python3") is still read. None when nothing is recorded for this platform: then
+    find it again (python3, python, py) and record it under this platform's key."""
+    v = (_config() if config is None else config).get("python")
+    if isinstance(v, str):
+        return v.strip() or None
+    if isinstance(v, dict):
+        found = v.get(platform_key(platform))
+        return found.strip() if isinstance(found, str) and found.strip() else None
+    return None
+
+
 OWNER = _config().get("owner") or "Me"            # the person whose tasks these are; others are waited on
 
 STATUS = "task-status"                       # the frontmatter key
