@@ -25,7 +25,7 @@ import json
 import socket
 import sys
 import threading
-from datetime import date
+from datetime import date, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
@@ -77,6 +77,8 @@ def task_json(t: dict, today: date | None = None, tasks: dict | None = None, arc
     d["waiting-on"] = T.watch_parties(t)
     held = T.open_dependencies(t, tasks or {}, archived) if tasks is not None else []
     d["held_by"] = [{"name": h["_path"].stem, "title": h["title"], "status": h[T.STATUS]} for h in held]   # "Waiting on: X"
+    left = T.left_inbox(t)
+    d["processed"] = left.isoformat() if left else None        # Recently processed reads "Filed <day>"
     return d
 
 
@@ -88,12 +90,20 @@ def payload(folder: Path = T.TASKS_DIR, today: date | None = None, vault_name: s
     tasks, errors = T.load_tasks(folder)
     archived, _ = T.load_tasks(folder / "Archive")
     v = T.views(tasks, today)
+    names = {k: [t["_path"].stem for t in rows] for k, rows in v.items()}
+    # Recently processed reaches into Archive/ too: a dump filed as a note, or split into tasks, is dropped and sync
+    # archives it at once. Those rows are read-only on the page ("archived") and hold nothing up
+    since = today - timedelta(days=T.PROCESSED_DAYS)
+    gone = [t for n, t in archived.items() if n not in tasks and (T.left_inbox(t) or date.min) >= since]
+    rows = sorted(v["processed"] + gone, key=lambda t: (T.left_inbox(t), t["title"]), reverse=True)
+    names["processed"] = [t["_path"].stem for t in rows]
     return {
         "today": today.isoformat(),
         "vault": vault_name or T._config().get("vault_name") or T.VAULT.name,
         "me": T.OWNER,
-        "tasks": [task_json(t, today, tasks, archived) for t in tasks.values()],
-        "views": {k: [t["_path"].stem for t in rows] for k, rows in v.items()},
+        "tasks": [task_json(t, today, tasks, archived) for t in tasks.values()]
+                 + [{**task_json(t, today), "archived": True} for t in gone],
+        "views": names,
         "tree": board_tree(tasks),
         "labels": {**DEFAULT_LABELS, **labels},
         "folders": sorted({T.link_name(t["project"]) for t in tasks.values() if t.get("project")}),
@@ -223,14 +233,16 @@ class Handler(BaseHTTPRequestHandler):
     def _write(self, req: dict) -> None:
         today = date.today()
         if self.path == "/api/add":
-            created, rejected = [], []                # rejected keeps each line as typed, so the page can put it back
-            for line in str(req.get("lines", "")).splitlines():
-                if not line.strip():
-                    continue
+            # one entry per Enter, whatever it holds: a task, a note, a voice ramble. It is kept as
+            # typed in the notes under a stand-in title; Claude cleans it up and sorts it at the next session
+            created, rejected = [], []                # rejected keeps the entry as typed, so the page can put it back
+            text = str(req.get("lines", ""))
+            if text.strip():
                 try:
-                    created.append(T.add_task(self.folder, today, line.strip(), inbox=True).stem)
+                    created.append(T.add_task(self.folder, today, T.dump_title(text), inbox=True,
+                                              note="Brain dump: " + text.strip()).stem)
                 except T.TaskError as e:
-                    rejected.append({"line": line, "error": str(e)})
+                    rejected.append({"line": text, "error": str(e)})
             return self._send(200, {"created": created, "rejected": rejected})
         if self.path == "/api/update":
             tasks, _ = T.load_tasks(self.folder)
@@ -308,8 +320,9 @@ def static_html(data: dict) -> str:
 
     def row(t, sub=False, start=False):
         mark = '<span class="start">Start here</span> ' if start else ""
+        num = f'#{_esc(t["id"])} · ' if t.get("id") else ""
         return (f'<div class="task{" sub" if sub else ""}"><input type="checkbox" disabled{" checked" if t[T.STATUS] == "done" else ""}>'
-                f'<div class="t"><div>{mark}{_esc(t["title"])}</div><div class="meta">{_esc(t["project_name"]) + " · " if t.get("project_name") else ""}{_chips(t, today)}</div></div></div>')
+                f'<div class="t"><div>{mark}{_esc(t["title"])}</div><div class="meta">{num}{_esc(t["project_name"]) + " · " if t.get("project_name") else ""}{_chips(t, today)}</div></div></div>')
 
     def section(title, names, start=False):
         rows = [row(by[n], start=start and i == 0) for i, n in enumerate(n for n in names if n in by)]
@@ -317,6 +330,7 @@ def static_html(data: dict) -> str:
 
     v = data["views"]
     parts = [section("Today", v["today"], start=True), section("Not planned yet", v["unplanned"]),
+             section("Upcoming", v.get("upcoming", [])),
              section("Reminders", v["reminders"]), section("Waiting on others", v["waiting"]),
              section("On hold", v["onhold"]), section("To sort", v["inbox"])]
     board = ['<div class="group">By project</div>']
@@ -325,7 +339,8 @@ def static_html(data: dict) -> str:
         for pr in node["projects"]:
             p = by.get(pr["name"])
             if p:
-                board.append(f'<div class="project"><span>▾</span><span class="t">{_esc(p["title"])}</span><span class="count">{len(pr["children"])}</span></div>')
+                num = f'<span class="tid">#{_esc(p["id"])}</span>' if p.get("id") else ""
+                board.append(f'<div class="project"><span>▾</span><span class="t">{_esc(p["title"])}</span>{num}<span class="count">{len(pr["children"])}</span></div>')
                 board += [row(by[n], True) for n in pr["children"] if n in by]
         board += [row(by[n]) for n in node["loose"] if n in by]
     return "".join(parts) + "".join(board)

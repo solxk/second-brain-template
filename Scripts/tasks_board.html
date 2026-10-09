@@ -64,8 +64,8 @@
   .stat.zero b { opacity:.45; }
 
   .dumprow { display:flex; gap:8px; align-items:flex-start; margin-top:8px; }
-  #dump { flex:1; min-width:0; min-height:48px; padding:12px 14px; border:1px solid var(--line); border-radius:var(--r-ctl);
-          background:var(--card); color:var(--ink); line-height:1.4; resize:vertical; }
+  #dump { flex:1 1 auto; min-width:0; min-height:48px; max-height:50vh; padding:12px 14px; border:1px solid var(--line); border-radius:var(--r-ctl);
+          background:var(--card); color:var(--ink); line-height:1.4; resize:none; overflow-y:auto; }   /* fitDump() sizes it to its text */
   #dump::placeholder { color:var(--muted); }
   #dump:focus { outline:2px solid var(--accent); outline-offset:1px; }
   .hint { margin:8px 0 0; font-size:13px; color:var(--muted); }
@@ -83,6 +83,11 @@
   .filters { display:flex; flex-wrap:wrap; gap:6px; }
   .filters select { min-height:36px; padding:0 10px; border:1px solid var(--line); border-radius:var(--r-ctl); background:var(--card); font-size:14px; cursor:pointer; }
   .filters select.set { border-color:var(--accent); }
+  .filters .toggle { display:inline-flex; align-items:center; gap:8px; min-height:36px; padding:0 12px; border:1px solid var(--line); border-radius:var(--r-ctl);
+                     background:var(--card); color:var(--ink); font-size:14px; white-space:nowrap; cursor:pointer; }   /* Your calls: a filter, on or off */
+  .filters .toggle .n { font-family:var(--font-label); font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .filters .toggle[aria-pressed=true] { border-color:var(--accent); background:var(--accent); color:var(--on-accent); font-weight:600; }
+  .filters .toggle[aria-pressed=true] .n { color:inherit; opacity:.85; }
 
   .week { display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); margin:16px 0 4px; text-align:center; }
   .day { display:grid; justify-items:center; gap:4px; padding:6px 0 8px; border-radius:999px; }
@@ -108,6 +113,7 @@
   .task.done .t > :first-child { color:var(--muted); text-decoration:line-through; }
   .meta { display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px; margin-top:4px; font-size:13px; font-weight:400; color:var(--muted); }
   .meta:empty { display:none; }
+  .tid { font-family:var(--font-label); font-size:12px; font-weight:400; color:var(--muted); font-variant-numeric:tabular-nums; white-space:nowrap; }   /* the task's number, #142 */
   .when { padding-top:2px; font-family:var(--font-label); font-size:12px; text-transform:var(--label-case); letter-spacing:var(--label-track); color:var(--muted); white-space:nowrap; }
   .when.late { color:var(--signal); font-weight:700; }
   .when.soon { color:var(--ink); font-weight:700; }
@@ -117,9 +123,20 @@
   .group { margin:28px 0 0; padding:0 6px 8px; border-bottom:1px solid var(--line); font-family:var(--font-label); font-size:var(--label-size);
            font-weight:600; text-transform:var(--label-case); letter-spacing:var(--label-track); color:var(--muted); }
   .empty { margin:0; padding:32px 6px; color:var(--muted); }
+  /* Upcoming: a heading for each of the next seven days, empty ones too, then the rest of the month and each month after */
+  .dayhead { display:flex; align-items:baseline; gap:10px; margin:28px 0 0; padding:0 6px 8px; border-bottom:1px solid var(--line); }
+  .dayhead:first-child { margin-top:14px; }
+  .dayhead .dnum { min-width:1.3em; font-family:var(--font-display); font-weight:var(--display-weight); font-size:28px; line-height:1; letter-spacing:var(--display-track); font-variant-numeric:tabular-nums; }
+  .dayhead .dname { font-family:var(--font-display); font-weight:600; font-size:16px; text-transform:var(--display-case); color:var(--muted); }
+  .dayhead.month .dname { font-weight:var(--display-weight); font-size:20px; color:var(--ink); }
+  .dayhead .count { margin-left:auto; }
   .notice { margin:20px 0 0; padding:12px 14px; border-radius:var(--r-row); background:var(--signal-wash); color:var(--signal-ink); font-size:14px; }
 
   .folders { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:16px; align-items:start; margin-top:16px; }
+  /* the sheets stack in lanes, each straight under the one above, gallery-style. lanes() deals them
+     out as many lanes as the grid has columns, so a style's own column width still decides how many fit */
+  .folders.laned { grid-template-columns:repeat(var(--lanes), minmax(0, 1fr)); }
+  .lane { display:grid; gap:inherit; align-content:start; min-width:0; }
   .folder { min-width:0; padding:4px 14px 10px; border-radius:var(--r-row); background:var(--card-2); container-type:inline-size; }
   .listcard { container-type:inline-size; }
   @container (max-width: 520px) {      /* a narrow list or folder: the date drops under the title, as on a phone, so the title keeps the width */
@@ -211,6 +228,16 @@
 
   @media (max-width: 760px) {
     .app { padding:14px 14px 80px; gap:14px; }
+    /* the phone: the page runs under the clock (viewport-fit=cover), so the top bar and the light/dark switch start
+       below iOS's status-bar blur, which runs a little past the status bar. --notch is 0 where there is no notch,
+       which leaves the old spacing; on a notched phone it is the inset plus 6px */
+    :root { --notch:calc(env(safe-area-inset-top, 0px) + min(6px, env(safe-area-inset-top, 0px))); }
+    .app { padding-top:calc(14px + var(--notch)); padding-left:max(14px, env(safe-area-inset-left, 0px)); padding-right:max(14px, env(safe-area-inset-right, 0px)); }
+    .themes { top:calc(14px + var(--notch)); right:max(14px, env(safe-area-inset-right, 0px)); }
+    /* opened from the Home Screen, newer iOS lays a fading blur over the top of the page too: 34px under the
+       status bar is the highest with no blur (measured on an iPhone, October 2026) */
+    .homescreen .app { padding-top:calc(env(safe-area-inset-top, 0px) + 34px); }
+    .homescreen .themes { top:calc(env(safe-area-inset-top, 0px) + 34px); }
     .card { padding:18px; }
     .top { gap:8px; }
     #tabs { flex-basis:100%; margin-inline:-6px; }
@@ -234,7 +261,8 @@
 <script>/* light or dark before the first paint: the owner's pick on this device, else the computer's setting; only for a style with a dark palette */
 (function () { var c = null; try { c = localStorage.getItem("board-theme"); } catch (e) {}
   var dark = (window.BOARD_STYLE || {}).dark && (c === "dark" || (c !== "light" && matchMedia("(prefers-color-scheme: dark)").matches));
-  document.documentElement.dataset.theme = dark ? "dark" : "light"; })();</script>
+  document.documentElement.dataset.theme = dark ? "dark" : "light";
+  if (navigator.standalone || matchMedia("(display-mode: standalone)").matches) document.documentElement.classList.add("homescreen"); })();</script>
 </head>
 <body>
 <div class="app" id="app">
@@ -255,10 +283,10 @@
   <section class="card capture">
     <label class="label" for="dump">Brain dump</label>
     <div class="dumprow">
-      <textarea id="dump" rows="1" placeholder="Anything on your mind"></textarea>
+      <textarea id="dump" rows="1" placeholder="Anything on your mind: a task, a note, an idea. Rough is fine."></textarea>
       <button class="btn primary" id="add" type="button"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg><span>Add to To sort</span></button>
     </div>
-    <p class="hint">Enter adds. Shift-Enter starts a new line. Claude files everything in To sort at the start of the next session.</p>
+    <p class="hint">Enter adds it as one entry, Shift-Enter starts a new line. At the next session Claude turns each entry into clean tasks, or files it as a note.</p>
   </section>
   <section class="card gaugecard" id="gaugecard" hidden></section>
   <section class="card listcard">
@@ -300,20 +328,22 @@ if (STYLE.dark) {
   darkQuery.addEventListener("change", applyTheme);
   applyTheme();
 }
-const VIEWS = [["today","Today"],["reminders","Reminders"],["board","By project"],["waiting","Waiting on others"],["onhold","On hold"],["claude","Claude"],["inbox","To sort"],["someday","Someday"],["done","Done"]];
+const VIEWS = [["today","Today"],["upcoming","Upcoming"],["reminders","Reminders"],["board","By project"],["waiting","Waiting on others"],["onhold","On hold"],["claude","Claude"],["inbox","To sort"],["someday","Someday"],["done","Done"]];
 const HEADS = {        // what each list is, in a line, for someone opening the board for the first time
   today: ["Today", "Planned for today, deadlines due or late, and anything in progress. Start at the top."],
+  upcoming: ["Upcoming", "What lands on Today in the days ahead: a planned day or a deadline. Give a task a day to put it here."],
   reminders: ["Reminders", "Nudges on a day. Each stays until you tick it; the morning brief shows it two days ahead."],
   board: ["By project", "Every open task by project and area, with goals and the tasks under them."],
   waiting: ["Waiting on others", "Waiting on someone outside: a person, a company. The latest chase comes first."],
   onhold: ["On hold", "Your tasks held up by another task. Each row says which one."],
   claude: ["Claude's tasks", "Things Claude runs for you. High priority first, then deadline."],
-  inbox: ["To sort", "Unfiled. Claude sorts these into the right project or area at the start of the next session."],
+  inbox: ["To sort", "Brain dumps and captures, as typed. Claude cleans each one up and files it at the start of the next session."],
   someday: ["Someday", "Parked. Off every list until you bring one back."],
   done: ["Done", "Finished, newest first. They move to the archive a week after."],
 };
 const EMPTY = {
   today: "Nothing planned for today. Give a task a planned day, or ask Claude to plan the day.",
+  upcoming: "Nothing planned for the days ahead.",
   reminders: "No reminders. Tell Claude what to remind you about, and when.",
   board: "No open tasks.", waiting: "Nothing is waiting on anyone else.", onhold: "Nothing is on hold.",
   claude: "Nothing for Claude.", inbox: "Nothing to sort. Type into the brain dump to add something.",
@@ -322,7 +352,7 @@ const EMPTY = {
 const STATUS_NAMES = {inbox:"To sort", todo:"To do", doing:"Doing", blocked:"On hold", someday:"Someday", done:"Done", dropped:"Dropped"};
 const EFFORT_NAMES = {deep:"Deep", medium:"Medium", easy:"Quick"};
 const OPEN = ["todo", "doing", "blocked"];
-const S = { data:null, view:"today", filters:{folder:"",effort:"",owner:"",priority:""}, open:null, collapsed:new Set(), later:false };
+const S = { data:null, view:"today", filters:{folder:"",effort:"",owner:"",priority:"",decision:false}, open:null, collapsed:new Set(), folds:{} };
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const day = s => { const [y, m, d] = String(s).slice(0, 10).split("-").map(Number); return new Date(y, m - 1, d); };
@@ -343,10 +373,19 @@ async function load() {
 
 function byName() { const m = {}; for (const t of S.data.tasks) m[t.name] = t; return m; }
 
-function passes(t) {
+function passes(t, skip) {           // skip: one filter to leave out, so a filter can count what it would show
   const f = S.filters;
   return (!f.folder || t.project_name === f.folder) && (!f.effort || (f.effort === "unsized" ? !t.effort : t.effort === f.effort))
-      && (!f.owner || t.owner === f.owner) && (!f.priority || t.priority === f.priority);
+      && (!f.owner || t.owner === f.owner) && (!f.priority || t.priority === f.priority) && (skip === "decision" || !f.decision || t.decision);
+}
+
+function listed(view, all) {         // every task the view shows, folded strips included, before the filters
+  const d = S.data, names = k => d.views[k] || [];
+  const ns = view === "today" ? [...names("today"), ...names("unplanned")]
+           : view === "inbox" ? [...names("inbox"), ...names("processed")]
+           : view === "board" ? Object.values(d.tree).flatMap(v => [...v.projects.flatMap(p => [p.name, ...p.children]), ...v.loose])
+           : names(view);
+  return ns.map(n => all[n]).filter(Boolean);
 }
 
 function dateText(s, short) {      // "Today", "Tomorrow", "Friday", "12 Oct"
@@ -396,13 +435,13 @@ function chips(t) {
 
 let rowNo = 0;
 function row(t, sub, opts = {}) {
-  const done = t[STATUS_KEY] === "done";
-  const folder = S.view === "board" || !t.project_name ? "" : `<span>${esc(t.project_name)}</span>`;
-  const no = STYLE.numbered ? `<span class="no">${++rowNo}</span>` : "";
+  const done = t[STATUS_KEY] === "done", numbered = STYLE.numbered && S.view !== "upcoming";   // Upcoming's order is by day, not a list to work down
+  const folder = (t.id ? `<span class="tid">#${esc(t.id)}</span>` : "") + (S.view === "board" || !t.project_name ? "" : `<span>${esc(t.project_name)}</span>`);
+  const no = numbered ? `<span class="no">${++rowNo}</span>` : "";
   const [, urgency] = (opts.label || whenText)(t);
   const start = opts.start ? `<span class="start">Start here</span>` : "";
-  return `<div class="task${sub ? " sub" : ""}${done ? " done" : ""}${STYLE.numbered ? " numbered" : ""}${urgency ? " w-" + urgency : ""}" data-name="${esc(t.name)}">${no}
-    <input type="checkbox" data-done ${done ? "checked" : ""} ${LIVE ? "" : "disabled"} aria-label="Done: ${esc(t.title)}">
+  return `<div class="task${sub ? " sub" : ""}${done ? " done" : ""}${numbered ? " numbered" : ""}${urgency ? " w-" + urgency : ""}" data-name="${esc(t.name)}">${no}
+    <input type="checkbox" data-done ${done ? "checked" : ""} ${LIVE && !t.archived ? "" : "disabled"} aria-label="Done: ${esc(t.title)}">
     <button class="t" type="button"><span>${start}${esc(t.title)}</span><span class="meta">${folder}${chips(t)}</span></button>
     ${when(t, opts.label)}</div>`;
 }
@@ -485,9 +524,47 @@ function sideHtml(c) {
 function todayHtml(list, later) {
   const first = S.data.views.today[0];         // "Start here" stays on the plan's first row whatever the filters show
   const rows = list.map(t => row(t, false, {start: t.name === first})).join("");
-  const strip = later.length ? `<details class="later"${S.later ? " open" : ""}><summary>Not planned yet <span class="count">${later.length}</span></summary>
+  const strip = later.length ? `<details class="later" data-fold="later"${S.folds.later ? " open" : ""}><summary>Not planned yet <span class="count">${later.length}</span></summary>
     <p class="explain">High priority, or a deadline within a week, and no planned day yet. Give one a day to put it on Today.</p>${later.map(t => row(t, false)).join("")}</details>` : "";
   return (rows || `<p class="empty">${EMPTY.today}</p>`) + strip;
+}
+
+function upcomingHtml(list) {
+  // the next seven days one by one, empty ones too, then the rest of this month, then each month (after Things).
+  // A row under a day's heading says only what the heading doesn't: the deadline, or a plan on another day
+  const today = day(S.data.today), byDay = {};
+  const upcomingDay = t => [t.when, t.due].filter(x => x && x > S.data.today).sort()[0];   // tasks.py's upcoming_day
+  for (const t of list) (byDay[upcomingDay(t)] ||= []).push(t);
+  const onDay = key => t => {
+    const out = [];
+    if (t.due) out.push(t.due === key ? "Deadline" : `Deadline ${dateText(t.due, true)}`);
+    if (t.when && t.when !== key) out.push(`Planned ${dateText(t.when, true)}`);
+    return [out.join(" · "), t.due === key ? "soon" : ""];
+  };
+  let html = "";
+  for (let i = 1; i <= 7; i++) {
+    const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i), key = iso(d);
+    const name = i === 1 ? "Tomorrow" : d.toLocaleDateString(undefined, {weekday: "long"});
+    html += `<h3 class="dayhead"><span class="dnum">${d.getDate()}</span><span class="dname">${name}</span></h3>`
+          + (byDay[key] || []).map(t => row(t, false, {label: onDay(key)})).join("");
+  }
+  const weekEnd = iso(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7)), months = {};
+  const after = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 8);   // the first day past the week: its month is "Rest of" unless it starts it
+  for (const t of list) { const k = upcomingDay(t); if (k > weekEnd) (months[k.slice(0, 7)] ||= []).push(t); }
+  for (const [m, rows] of Object.entries(months).sort()) {
+    const first = day(m + "-01"), month = first.toLocaleDateString(undefined, {month: "long", ...(first.getFullYear() !== today.getFullYear() ? {year: "numeric"} : {})});
+    const name = m === iso(after).slice(0, 7) && after.getDate() !== 1 ? `Rest of ${month}` : month;
+    html += `<h3 class="dayhead month"><span class="dname">${name}</span><span class="count">${rows.length}</span></h3>` + rows.map(t => row(t, false, {label: t => whenText(t, true)})).join("");
+  }
+  return html;
+}
+
+function inboxHtml(list, processed) {
+  // To sort, then a folded strip of what left it this week, newest first, so the owner can see where each went
+  const rows = list.map(t => row(t, false)).join("") || `<p class="empty">${Object.values(S.filters).some(Boolean) ? "Nothing matches these filters." : EMPTY.inbox}</p>`;
+  const filed = t => [`Filed ${dateText(t.processed, true)}`, ""];
+  return rows + (processed.length ? `<details class="later" data-fold="processed"${S.folds.processed ? " open" : ""}><summary>Recently processed <span class="count">${processed.length}</span></summary>
+    <p class="explain">Filed out of To sort in the last week, newest first. Open one to see what Claude did with it.</p>${processed.map(t => row(t, false, {label: filed})).join("")}</details>` : "");
 }
 
 function boardHtml(d, all) {
@@ -504,17 +581,34 @@ function boardHtml(d, all) {
       count += kids.length;
       section += `<div class="project${closed ? " closed" : ""}" data-proj="${esc(p.name)}" data-name="${esc(p.name)}"><span class="chev" aria-hidden="true">${CHEV}</span>
         <input type="checkbox" data-done ${LIVE ? "" : "disabled"} aria-label="Done: ${esc(p.title)}">
-        <button class="t" type="button" data-name="${esc(p.name)}"><span>${esc(p.title)}</span></button><span class="chip goal">${esc(d.labels.project)}</span><span class="count">${kids.length}</span></div>`;
+        <button class="t" type="button" data-name="${esc(p.name)}"><span>${esc(p.title)}</span></button>${p.id ? `<span class="tid">#${esc(p.id)}</span>` : ""}<span class="chip goal">${esc(d.labels.project)}</span><span class="count">${kids.length}</span></div>`;
       if (!closed) section += kids.map(k => row(k, true)).join("");
     }
     const loose = node.loose.map(n => all[n]).filter(t => t && passes(t));
     count += loose.length;
     section += loose.map(t => row(t, false)).join("");
-    if (section) html += `<section class="folder"><header><h3>${v === "—" ? "No project or area" : esc(v)}</h3><span class="count">${count} open</span></header>${section}</section>`;
+    if (section) html += `<section class="folder" data-i="${Object.keys(d.tree).indexOf(v)}"><header><h3>${v === "—" ? "No project or area" : esc(v)}</h3><span class="count">${count} open</span></header>${section}</section>`;
     shown += count;
   }
   return [html ? `<div class="folders">${html}</div>` : "", shown];
 }
+
+function lanes() {
+  // deal By project's sheets into as many lanes as the grid has columns, each to the shortest lane so far, in their order
+  const box = document.querySelector(".folders"); if (!box) return;
+  const had = box.classList.contains("laned") ? box.children.length : 0;
+  box.classList.remove("laned");                 // measure the style's own grid: how many columns fit at this width
+  const sheets = [...box.querySelectorAll(".folder")].sort((a, b) => a.dataset.i - b.dataset.i);
+  const n = Math.min(sheets.length, Math.max(1, getComputedStyle(box).gridTemplateColumns.split(" ").filter(Boolean).length));
+  if (had && had === n) { box.classList.add("laned"); return; }
+  box.innerHTML = "";
+  box.style.setProperty("--lanes", n);
+  box.classList.add("laned");
+  const ls = Array.from({length: n}, () => box.appendChild(Object.assign(document.createElement("div"), {className: "lane"})));
+  for (const sh of sheets) ls.reduce((a, b) => b.offsetHeight < a.offsetHeight ? b : a).appendChild(sh);
+}
+let laneTimer;
+addEventListener("resize", () => { clearTimeout(laneTimer); laneTimer = setTimeout(lanes, 100); });
 
 function render() {
   const d = S.data, all = byName(), c = counts();
@@ -538,10 +632,14 @@ function render() {
              claude: d.views.claude.length, inbox: c.inbox};
   $("#tabs").innerHTML = VIEWS.map(([k, label]) => `<button type="button" data-v="${k}" class="${S.view === k ? "on" : ""}" ${S.view === k ? 'aria-current="page"' : ""}><span>${label}</span>${n[k] ? `<span class="n">${n[k]}</span>` : ""}</button>`).join("");
 
-  const owners = [...new Set(d.tasks.map(t => t.owner).filter(Boolean))].sort();
+  const owners = [...new Set(d.tasks.filter(t => !t.archived).map(t => t.owner).filter(Boolean))].sort();
   const sel = (key, opts, label, names) => `<select data-f="${key}" aria-label="${label}" class="${S.filters[key] ? "set" : ""}"><option value="">${label}</option>${opts.map(o => `<option ${S.filters[key] === o ? "selected" : ""} value="${esc(o)}">${esc(names ? names[o] : o)}</option>`).join("")}</select>`;
   $("#filters").innerHTML = sel("folder", d.folders, "All projects and areas") + sel("effort", ["deep", "medium", "easy", "unsized"], "Any effort", {deep:"Deep", medium:"Medium", easy:"Quick", unsized:"No effort set"})
-    + (owners.length > 1 ? sel("owner", owners, "Whose move") : "") + sel("priority", ["high", "normal", "low"], "Any priority", {high:"High", normal:"Normal", low:"Low"});
+    + (owners.length > 1 ? sel("owner", owners, "Whose move") : "") + sel("priority", ["high", "normal", "low"], "Any priority", {high:"High", normal:"Normal", low:"Low"})
+    + (() => {        // the number is the calls in this list, so it never promises rows the list doesn't have
+        const n = listed(S.view, all).filter(t => t.decision && passes(t, "decision")).length;
+        return `<button type="button" class="toggle" data-toggle="decision" aria-pressed="${S.filters.decision}" title="Only the yes/no calls that are yours to make">Your calls${n ? ` <span class="n">${n}</span>` : ""}</button>`;
+      })();
 
   const [title, explain] = HEADS[S.view];
   $("#vtitle").textContent = title;
@@ -554,6 +652,14 @@ function render() {
     const list = pick("today");
     html = todayHtml(list, pick("unplanned"));
     shown = list.length;
+  } else if (S.view === "upcoming") {
+    const list = pick("upcoming");
+    html = upcomingHtml(list);
+    shown = list.length;
+  } else if (S.view === "inbox") {
+    const list = pick("inbox");
+    html = inboxHtml(list, pick("processed"));
+    shown = list.length;
   } else if (S.view === "board") {
     [html, shown] = boardHtml(d, all);
   } else {
@@ -564,6 +670,7 @@ function render() {
   $("#vlabel").textContent = `${VIEWS.find(v => v[0] === S.view)[1]} · ${shown}`;
   $("#main").innerHTML = html || `<p class="empty">${Object.values(S.filters).some(Boolean) ? "Nothing matches these filters." : EMPTY[S.view]}</p>`;
   if (d.errors.length) $("#main").innerHTML += `<p class="notice">These task files couldn't be read, so they're not shown. Ask Claude to fix them: ${d.errors.map(esc).join(", ")}</p>`;
+  lanes();
 }
 
 function bodyHtml(body) {
@@ -579,7 +686,7 @@ function relations(t) {              // what this task waits on, and what waits 
 
 function openPanel(name) {
   const t = byName()[name]; if (!t) return; S.open = name;
-  const dis = LIVE ? "" : "disabled";
+  const dis = LIVE && !t.archived ? "" : "disabled";
   const opt = (opts, cur, names) => opts.map(o => `<option ${o === (cur || "") ? "selected" : ""} value="${esc(o)}">${esc(names ? names[o] : o) || "None"}</option>`).join("");
   const seg = (key, opts, cur, label) => `<div class="seg" role="group" aria-label="${label}">${opts.map(([v, l]) => `<button type="button" data-seg="${key}" data-val="${v}" aria-pressed="${v === cur}" ${dis}>${esc(l)}</button>`).join("")}</div>`;
   const field = (label, control, id) => `<div class="field">${id ? `<label for="${id}">${label}</label>` : `<span>${label}</span>`}${control}</div>`;
@@ -607,15 +714,16 @@ function openPanel(name) {
       ${field("Waiting on", `<input id="f-wait" data-k="waiting-on" value="${esc((t["waiting-on"] || []).join(", "))}" placeholder="a person, a company" ${dis}>`, "f-wait")}
       ${field("Expecting", `<input id="f-expect" data-k="expecting" value="${esc(t.expecting || "")}" placeholder="what you're waiting for" ${dis}>`, "f-expect")}
       ${field("Chase after", `<input id="f-chase" type="date" data-k="chase-after" data-blur="1" value="${esc(t["chase-after"] || "")}" ${dis}>`, "f-chase")}</div>` : "";
-  const chased = LIVE && S.data.views.waiting.includes(t.name) ? `<button class="btn ghost" type="button" data-chased="1">Chased them today</button>` : "";
-  $("#panelBody").innerHTML = `<p class="label">${esc(L[kind] || L.task)}${t.project_name ? " · " + esc(t.project_name) : ""}</p>
+  const chased = LIVE && !t.archived && S.data.views.waiting.includes(t.name) ? `<button class="btn ghost" type="button" data-chased="1">Chased them today</button>` : "";
+  $("#panelBody").innerHTML = `<p class="label">${t.id ? `#${esc(t.id)} · ` : ""}${esc(L[kind] || L.task)}${t.project_name ? " · " + esc(t.project_name) : ""}</p>
     <h2>${esc(t.title)}</h2>
-    ${LIVE ? "" : `<p class="ro">This is a read-only copy. Open the board on your computer to change anything.</p>`}
+    ${!LIVE ? `<p class="ro">This is a read-only copy. Open the board on your computer to change anything.</p>`
+      : t.archived ? `<p class="ro">Archived after it was filed, so it can't be changed. The notes below say where it went.</p>` : ""}
     <div class="fields">${fields.join("")}</div>
     ${watch}
     ${relations(t)}
     <div class="notes"><p class="label">Notes and history</p><div class="body">${bodyHtml(t.body)}</div></div>
-    <div class="actions"><a class="btn primary" href="${obs("Tasks/" + t.name)}">Open in Obsidian</a>${chased}${t.parent_name ? `<button class="btn ghost" type="button" data-go="${esc(t.parent_name)}">${esc(L.project)}: ${esc(titles[t.parent_name] || t.parent_name)}</button>` : ""}</div>`;
+    <div class="actions"><a class="btn primary" href="${obs((t.archived ? "Tasks/Archive/" : "Tasks/") + t.name)}">Open in Obsidian</a>${chased}${t.parent_name ? `<button class="btn ghost" type="button" data-go="${esc(t.parent_name)}">${esc(L.project)}: ${esc(titles[t.parent_name] || t.parent_name)}</button>` : ""}</div>`;
   $("#panel").classList.add("open");
   document.body.classList.add("panel-open");
 }
@@ -650,6 +758,8 @@ async function setStatus(name, value) {     // dropping asks for the reason; it 
 }
 
 document.addEventListener("click", async e => {
+  const tog = e.target.closest("[data-toggle]");
+  if (tog) { S.filters[tog.dataset.toggle] = !S.filters[tog.dataset.toggle]; render(); return; }
   const tab = e.target.closest("[data-v]");
   if (tab) { S.view = tab.dataset.v; render(); if (tab.dataset.jump) $("#viewhead").scrollIntoView({block:"start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"}); return; }
   const seg = e.target.closest("[data-seg]");
@@ -664,7 +774,7 @@ document.addEventListener("click", async e => {
   if (e.target.closest(".close") || e.target.id === "scrim") closePanel();
 });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && S.open) closePanel(); });
-document.addEventListener("toggle", e => { if (e.target.matches && e.target.matches(".later")) S.later = e.target.open; }, true);   // stays open across re-renders
+document.addEventListener("toggle", e => { if (e.target.dataset && e.target.dataset.fold) S.folds[e.target.dataset.fold] = e.target.open; }, true);   // a strip stays open across re-renders
 document.addEventListener("change", async e => {
   const f = e.target.closest("[data-f]"); if (f) { S.filters[f.dataset.f] = f.value; render(); return; }
   const cb = e.target.closest("input[data-done]"); if (cb && LIVE) { await save(cb.closest("[data-name]").dataset.name, {[STATUS_KEY]: cb.checked ? "done" : "todo"}); return; }
@@ -685,15 +795,28 @@ async function addDump() {
   try {
     const r = await fetch("/api/add", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({lines})});
     const j = await r.json();
-    $("#dump").value = j.rejected.map(x => x.line).join("\n");     // the box keeps only the lines that weren't added, as typed
-    toast(`${j.created.length} added to To sort${j.rejected.length ? `. Not added: ${j.rejected.map(x => x.error).join("; ")}` : ""}`);
+    $("#dump").value = j.rejected.map(x => x.line).join("\n");     // an entry that wasn't added stays in the box, as typed
+    fitDump();
+    toast(j.created.length ? "Added to To sort" : `Not added: ${j.rejected.map(x => x.error).join("; ")}`);
     await load();
   } catch (e) { toast("Not added: can't reach the board. Ask Claude to open the board."); }
   finally { dumping = false; }
 }
 $("#dump").addEventListener("keydown", e => { if (e.key !== "Enter" || e.shiftKey) return; e.preventDefault(); addDump(); });
+function fitDump() {                 // the box grows with what's in it, or with the placeholder when empty, so nothing is cut off
+  const ta = $("#dump"), empty = !ta.value;
+  ta.style.height = "auto";
+  if (empty) ta.value = ta.placeholder;
+  const h = ta.scrollHeight + ta.offsetHeight - ta.clientHeight;   // scrollHeight leaves out the border
+  if (empty) ta.value = "";
+  ta.style.height = h + "px";
+}
+$("#dump").addEventListener("input", fitDump);
+addEventListener("resize", fitDump);
+if (document.fonts) document.fonts.ready.then(fitDump);
 $("#add").addEventListener("click", addDump);
 if (!LIVE) { $("#dump").placeholder = "Read-only copy: add things from the board on your computer"; $("#dump").disabled = true; $("#add").disabled = true; }
+fitDump();
 load();
 </script>
 </body>

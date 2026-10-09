@@ -3,10 +3,11 @@
 """
 import contextlib
 import io
+import os
 import sys
 import tempfile
 import unittest
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -62,7 +63,13 @@ class ParseSerialize(unittest.TestCase):
             T.parse_frontmatter("# just a heading\n")
 
 
-def make(folder: Path, title, **kw):
+def touch(path: Path, day: date) -> None:
+    """Set a note's modification time to noon on `day`, as if it was last edited then."""
+    ts = datetime(day.year, day.month, day.day, 12).timestamp()
+    os.utime(path, (ts, ts))
+
+
+def make(folder: Path, title, body="", **kw):
     fm = {"type": "task", "title": title, "project": "[[P]]", "parent": None,
           "depends-on": [], T.STATUS: "todo", "priority": "normal",
           "kind": "task", "effort": None, "decision": None, "due": None,
@@ -71,7 +78,7 @@ def make(folder: Path, title, **kw):
     if "status" in kw:                      # convenience: status="done" -> the real key
         kw[T.STATUS] = kw.pop("status")
     fm.update(kw)
-    (folder / f"{title}.md").write_text(T.serialize(fm, ""))
+    (folder / f"{title}.md").write_text(T.serialize(fm, body))
 
 
 class LoadAndSync(unittest.TestCase):
@@ -759,6 +766,42 @@ class TodayIsThePlan(unittest.TestCase):
         self.assertEqual(self.titles(v["unplanned"]),
                          ["Deadline first", "Deadline high", "Deadline normal", "A high", "B high"])
 
+    def test_upcoming_is_todays_rule_run_forward(self):
+        # Upcoming: each task on the first later day Today would show it, by day then Today's order
+        make(self.tmp, "Sat easy", when="2026-10-10", effort="easy")
+        make(self.tmp, "Sat deep", when="2026-10-10", effort="deep")
+        make(self.tmp, "Sat deadline", due="2026-10-10", effort="easy")
+        make(self.tmp, "Fri plan, later deadline", when="2026-10-09", due="2026-10-20")
+        make(self.tmp, "Plan after its deadline", when="2026-10-25", due="2026-10-12")   # lands on the deadline
+        make(self.tmp, "Planned today, deadline later", when="2026-10-08", due="2026-10-15")   # on Today already
+        make(self.tmp, "No dates", priority="high")
+        make(self.tmp, "Theirs", when="2026-10-10", owner="Rahma")
+        make(self.tmp, "A goal", when="2026-10-10", kind="project")
+        make(self.tmp, "Parked", when="2026-10-10", status="someday")
+        make(self.tmp, "Call mum", when="2026-10-10", kind="reminder", project=None)   # reminders keep their own list
+        v, tasks = self.views()
+        self.assertEqual(self.titles(v["upcoming"]),
+                         ["Fri plan, later deadline", "Sat deadline", "Sat deep", "Sat easy", "Plan after its deadline"])
+        self.assertEqual(T.upcoming_day(tasks["Plan after its deadline"], self.today), date(2026, 10, 12))
+        self.assertIsNone(T.upcoming_day(tasks["Planned today, deadline later"], self.today))
+        self.assertIsNone(T.upcoming_day(tasks["No dates"], self.today))
+
+    def test_processed_lists_what_left_to_sort_this_week(self):
+        # Recently processed: the day a task last left To sort, read from its log. The template's
+        # log says "status"; a line written by hand or by an older script may say "task-status"
+        make(self.tmp, "Filed today", body="- 2026-10-08 brief: status inbox → todo; project — → [[Home]]\n")
+        make(self.tmp, "Filed earlier", body="- 2026-10-02 board: project — → [[Home]]; task-status inbox → todo\n")
+        make(self.tmp, "Filed long ago", body="- 2026-09-20 brief: status inbox → todo\n")
+        make(self.tmp, "Filed then done", status="done", done="2026-10-08",
+             body="- 2026-10-05 brief: status inbox → todo\n- 2026-10-08 board: status todo → done\n")
+        make(self.tmp, "Still to sort", status="inbox", body="- 2026-10-07 board: status todo → inbox\n")
+        make(self.tmp, "Never to sort", body="- 2026-10-08 brief: effort — → easy\n")
+        v, tasks = self.views()
+        self.assertEqual(self.titles(v["processed"]), ["Filed today", "Filed then done", "Filed earlier"])
+        self.assertEqual(T.left_inbox(tasks["Filed earlier"]), date(2026, 10, 2))
+        self.assertIsNone(T.left_inbox(tasks["Never to sort"]))
+        self.assertEqual(T.PROCESSED_DAYS, 7)
+
     def test_carried_days_reads_when_changes_in_the_log(self):
         body = ("- 2026-10-01 created\n"
                 "- 2026-10-02 interview: when — → 2026-10-05; this week\n"
@@ -819,6 +862,8 @@ class OneWaiting(unittest.TestCase):
                           ("Done theirs", {"owner": "Rahma", "status": "done", "done": "2026-10-07"}),
                           ("Someday theirs", {"owner": "Rahma", "status": "someday"})):
             make(self.tmp, title, **kw)
+        for p in self.tmp.glob("*.md"):
+            touch(p, date(2026, 9, 1))                    # last edited before any of their activity
         r = T.sync(self.tmp, self.today, archive=False)
         _, tasks = self.views()
         chase = {n: t.get("chase-after") for n, t in tasks.items()}
@@ -828,6 +873,8 @@ class OneWaiting(unittest.TestCase):
         self.assertIn("- 2026-10-08 sync: chase-after → 2026-10-08 (default)", tasks["Handed over"]["_body"])
         self.assertIn("Quiet: task-status=todo done= chase-after=2026-09-27 (default)", r["changed"])
         self.assertNotIn("sync:", tasks["Dated"]["_body"])
+        for p in self.tmp.glob("*.md"):                   # as if no one edited them since, whatever today's real date
+            touch(p, date.fromisoformat(T.parse_frontmatter(p.read_text())[0]["updated"]))
         before = {p.name: p.read_text() for p in self.tmp.glob("*.md")}
         self.assertEqual(T.sync(self.tmp, self.today, archive=False)["changed"], [])   # the board syncs after every save
         self.assertEqual({p.name: p.read_text() for p in self.tmp.glob("*.md")}, before)
@@ -1084,3 +1131,141 @@ class PythonPerComputer(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class NumbersTitlesAndBlockers(unittest.TestCase):
+    """Task numbers, brain-dump clean-up and blockers set by Claude."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.today = date(2026, 10, 9)
+
+    def load(self):
+        return T.load_tasks(self.tmp)[0]
+
+    def test_add_gives_the_next_number_and_never_reuses_an_archived_one(self):
+        make(self.tmp, "Old", id="7")
+        (self.tmp / "Archive").mkdir()
+        make(self.tmp / "Archive", "Archived", id="12", status="done", done="2026-09-01")
+        T.add_task(self.tmp, self.today, "New")
+        T.add_task(self.tmp, self.today, "Call mum", kind="reminder", when="2026-10-10")
+        self.assertEqual((self.load()["New"]["id"], self.load()["Call mum"]["id"]), ("13", "14"))
+
+    def test_sync_numbers_tasks_without_one_and_renumbers_a_duplicate(self):
+        make(self.tmp, "B", created="2026-09-02")
+        make(self.tmp, "A", created="2026-09-01")
+        make(self.tmp, "Has five", id="5", created="2026-09-03")
+        make(self.tmp, "Copy of five", id="5", created="2026-09-04")    # two computers numbered at once
+        for p in self.tmp.glob("*.md"):
+            touch(p, date(2026, 9, 1))                    # untouched since `updated`
+        report = T.sync(self.tmp, self.today)
+        tasks = self.load()
+        self.assertEqual({n: t["id"] for n, t in tasks.items()}, {"Has five": "5", "A": "6", "B": "7", "Copy of five": "8"})
+        self.assertIn("sync: id 5 → 8 (5 was taken)", tasks["Copy of five"]["_body"])
+        self.assertNotIn("sync", tasks["A"]["_body"])                     # a first number logs nothing
+        self.assertEqual(tasks["A"]["updated"], "2026-09-01")             # a number is not an edit
+        self.assertEqual(date.fromtimestamp((self.tmp / "A.md").stat().st_mtime), date(2026, 9, 1))
+        self.assertIn("A: id #6", report["changed"])
+        self.assertEqual(T.sync(self.tmp, self.today)["changed"], [])
+
+    def test_an_archived_number_is_taken(self):
+        (self.tmp / "Archive").mkdir()
+        make(self.tmp / "Archive", "Gone", id="3", status="done", done="2026-09-01")
+        make(self.tmp, "Came back as three", id="3")
+        T.sync(self.tmp, self.today)
+        self.assertEqual(self.load()["Came back as three"]["id"], "4")
+
+    def test_a_bad_id_is_malformed(self):
+        make(self.tmp, "Odd", id="x1")
+        self.assertIn("bad id", T.load_tasks(self.tmp)[1][0][1])
+
+    def test_no_number_writes_no_empty_id_line(self):
+        make(self.tmp, "Plain")
+        self.assertNotIn("id:", (self.tmp / "Plain.md").read_text())
+        make(self.tmp, "Numbered", id="4")
+        self.assertIn("\ntitle: Numbered\nid: 4\n", (self.tmp / "Numbered.md").read_text())
+
+    def test_set_and_show_take_a_number(self):
+        make(self.tmp, "Numbered", id="42")
+        code, out = cli(self.tmp, self.today, "set", "#42", "--effort", "easy")
+        self.assertEqual((code, self.load()["Numbered"]["effort"]), (0, "easy"))
+        self.assertEqual(cli(self.tmp, self.today, "set", "42", "--priority", "high")[0], 0)
+        code, out = cli(self.tmp, self.today, "show", "#42")
+        self.assertEqual(code, 0)
+        self.assertIn("#42 Numbered", out)
+        self.assertIn("Numbered.md", out)
+        self.assertIn("priority: high", out)
+        self.assertEqual(cli(self.tmp, self.today, "show", "#99")[0], 1)
+        self.assertEqual(cli(self.tmp, self.today, "set", "#99", "--effort", "easy")[0], 1)
+
+    def test_show_finds_an_archived_task(self):
+        (self.tmp / "Archive").mkdir()
+        make(self.tmp / "Archive", "Long done", id="2", status="done", done="2026-09-01")
+        code, out = cli(self.tmp, self.today, "show", "#2")
+        self.assertEqual(code, 0)
+        self.assertIn("Archive", out)
+
+    def test_list_and_brief_lines_carry_the_number(self):
+        make(self.tmp, "Planned", id="3", when="2026-10-09")
+        make(self.tmp, "Call mum", id="4", kind="reminder", project=None, when="2026-10-09")
+        self.assertIn("#3 ", cli(self.tmp, self.today, "list")[1])
+        brief = cli(self.tmp, self.today, "brief")[1]
+        self.assertIn("Start here: #3 [normal] Planned", brief)
+        self.assertIn("- #4 Call mum", brief)
+
+    def test_dump_title_is_the_first_line_cut_at_a_word(self):
+        self.assertEqual(T.dump_title("  rebook gp\nand the dentist"), "rebook gp")
+        long = "so I was thinking we should probably sort out the whole shed roof thing before the winter rain comes in"
+        title = T.dump_title(long)
+        self.assertTrue(title.endswith("…") and len(title) <= T.FIRST_LINE_MAX + 1, title)
+        self.assertTrue(long.startswith(title[:-1]))
+        self.assertEqual(T.dump_title("   \n  "), "Brain dump")
+
+    def test_title_renames_the_note_and_rewrites_task_links(self):
+        make(self.tmp, "rebook GP appointment. To do tomorrow medium priority", status="inbox", id="9")
+        make(self.tmp, "After it", **{"depends-on": ["[[rebook GP appointment. To do tomorrow medium priority]]"]},
+             body="See [[rebook GP appointment. To do tomorrow medium priority|the GP one]].\n")
+        code, out = cli(self.tmp, self.today, "set", "#9", "--title", "Rebook the GP appointment",
+                        "--project", "Health", "--status", "todo", "--source", "brief")
+        self.assertEqual(code, 0, out)
+        tasks = self.load()
+        t = tasks["Rebook the GP appointment"]
+        self.assertEqual((t["title"], t["id"], t[T.STATUS]), ("Rebook the GP appointment", "9", "todo"))
+        self.assertIn("brief: title rebook GP appointment. To do tomorrow medium priority → Rebook the GP appointment",
+                      t["_body"])
+        self.assertEqual(tasks["After it"]["depends-on"], ["[[Rebook the GP appointment]]"])
+        self.assertIn("[[Rebook the GP appointment|the GP one]]", tasks["After it"]["_body"])
+        self.assertEqual(T.left_inbox(t), self.today)
+        self.assertFalse((self.tmp / "rebook GP appointment. To do tomorrow medium priority.md").exists())
+
+    def test_title_refuses_a_name_already_taken(self):
+        make(self.tmp, "One")
+        make(self.tmp, "Two")
+        self.assertEqual(cli(self.tmp, self.today, "set", "One", "--title", "Two")[0], 1)
+        self.assertIn("One", self.load())
+
+    def test_detail_goes_above_the_log(self):
+        make(self.tmp, "Dumped", body="Brain dump: rebook gp\n\n- 2026-10-09 created\n")
+        self.assertEqual(cli(self.tmp, self.today, "set", "Dumped", "--detail", "Gatley Medical Centre, 0161 000 0000.")[0], 0)
+        body = self.load()["Dumped"]["_body"]
+        self.assertTrue(body.startswith("Brain dump: rebook gp\n\nGatley Medical Centre, 0161 000 0000.\n\n- 2026-10-09 created\n"), body)
+        self.assertIn("claude: details added", body)
+
+    def test_after_and_not_after_set_blockers_and_derive_blocked(self):
+        make(self.tmp, "Gate", id="1")
+        make(self.tmp, "Held", id="2")
+        self.assertEqual(cli(self.tmp, self.today, "set", "#2", "--after", "#1")[0], 0)
+        held = self.load()["Held"]
+        self.assertEqual((held["depends-on"], held[T.STATUS]), (["[[Gate]]"], "blocked"))
+        self.assertIn("depends-on — → [[Gate]]", held["_body"])
+        self.assertEqual(cli(self.tmp, self.today, "set", "Held", "--not-after", "Gate")[0], 0)
+        held = self.load()["Held"]
+        self.assertEqual((held["depends-on"], held[T.STATUS]), ([], "todo"))
+        self.assertEqual(cli(self.tmp, self.today, "set", "Held", "--after", "Held")[0], 1)       # not on itself
+        self.assertEqual(cli(self.tmp, self.today, "set", "Held", "--after", "Nothing")[0], 1)    # must exist
+
+    def test_the_board_cannot_set_blockers(self):
+        make(self.tmp, "Gate")
+        make(self.tmp, "Held")
+        with self.assertRaises(T.TaskError):
+            T.update_task(self.tmp, "Held", {"depends-on": ["Gate"]}, self.today, source="board")

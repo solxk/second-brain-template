@@ -42,7 +42,7 @@
 .viewhead { border-bottom-color:var(--line); }
 #vtitle { font-size:22px; }
 .explain { font-size:14px; }
-.filters select { font-family:var(--font-label); font-size:12px; letter-spacing:.08em; text-transform:uppercase; background:var(--card-2); }
+.filters select, .filters .toggle { font-family:var(--font-label); font-size:12px; letter-spacing:.08em; text-transform:uppercase; background:var(--card-2); }
 .task { border-bottom-color:var(--line); }
 .task.w-late { background:linear-gradient(90deg, rgba(255,138,61,.08), transparent 60%); box-shadow:inset 2px 0 0 var(--signal); }
 .task input[type=checkbox] { border-color:var(--accent); background:transparent; }

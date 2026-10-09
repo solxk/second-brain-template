@@ -48,7 +48,11 @@ body { background-image:linear-gradient(var(--grid) 1px, transparent 1px), linea
 
 .viewhead { border-bottom:1.5px solid var(--edge); }
 #vtitle { font-size:clamp(44px, 6vw, 72px); line-height:.95; letter-spacing:-0.04em; }
-.filters select { border:1.5px solid var(--edge); }
+.filters select, .filters .toggle { border:1.5px solid var(--edge); }
+.filters select.set, .filters .toggle[aria-pressed=true] { box-shadow:2px 2px 0 var(--signal); }   /* a filter that's on */
+.filters .toggle[aria-pressed=true] { background:var(--card); color:var(--ink); font-weight:700; }
+.filters .toggle[aria-pressed=true] .n { color:var(--signal); opacity:1; }
+.dayhead { border-bottom:1.5px solid var(--edge); }
 .task .t > :first-child { font-weight:700; }
 .chip { border-color:var(--line); background:var(--card); font-family:var(--font-label); font-size:11px; text-transform:uppercase; letter-spacing:.04em; border-radius:3px; }
 .chip.decision { border:1.5px solid var(--signal); background:var(--card); color:var(--signal); }

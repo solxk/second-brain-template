@@ -8,7 +8,7 @@ Until `vault.json` says `"setup": "done"`, this folder isn't set up. Read `SETUP
 
 ## On arrival
 
-Run the brief: `.claude/skills/brief/SKILL.md` (the owner can also type `/brief`). It reads `Map.md` and `Me.md`, syncs the tasks, reads the calendar and the phone list if they're connected, and opens with a short briefing shaped by "Starting and ending the day" in `Me.md`. If the owner asks "what's on today" at any other time, show Today, then Not planned yet, then the open decisions, never Today alone.
+Run the brief: `.claude/skills/brief/SKILL.md` (the owner can also type `/brief`). It reads `Map.md` and `Me.md`, syncs the tasks, reads the calendar and the phone list if they're connected, cleans up To sort (each brain-dump entry becomes clean tasks, a reminder or a filed note: "Brain dumps" in `Tasks/Tasks.md`), and opens with a short briefing shaped by "Starting and ending the day" in `Me.md`. If the owner asks "what's on today" at any other time, show Today, then Not planned yet, then the open decisions, never Today alone.
 
 ## On session end
 
@@ -25,6 +25,7 @@ Claude may create and edit anything in `Inbox/`, `Projects/`, `Areas/`, `Resourc
 - A link or video to get to goes under "To watch" in `Resources/Resources.md`, or in the Google Tasks **To watch** list if that's connected. A habit (no screens after ten) goes under Loose ends in its area's folder note. Loose ends never hold anything with a date: an event on a date is a reminder plus the tasks it needs, and a dated target is a task.
 - An idea with no work started is a line under Ideas in `Resources/Resources.md`; ask before making a project folder for it, and make one when work starts. A one-off thing the owner runs or looks after (a client job, a committee, an estate) is a goal inside the work or life folder it belongs to, not a folder of its own; say the difference in two sentences, then let them choose.
 - How tasks, goals and reminders work, and the commands: `Tasks/Tasks.md`. Read it before creating or changing tasks. Change a task only with `tasks.py set` or the board, never by editing its fields.
+- Every task has a number (`id`, shown #142). Whenever tasks are listed in chat, put the number before the title ("#142 Rebook the GP"), so the owner can answer by number. `tasks.py show "#142"` finds one, and `#142` works wherever a title does.
 - Anything in `Inbox/` is unfiled. Ingest it: put it where it belongs, link it, update any note it changes, flag anything it contradicts, then remove the copy in `Inbox/`. Keep heavy originals (contracts, statements) word for word, with a short `.md` summary next to them.
 
 ## Linking

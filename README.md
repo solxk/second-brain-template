@@ -58,13 +58,16 @@ Obsidian is a free notes app that opens this folder as it is. It makes the links
 ## The task board
 
 Say "open the board", and Claude starts it and gives you http://127.0.0.1:8765/. It has:
-- a box at the top for dumping thoughts;
+- a box at the top for dumping thoughts. Each Enter adds one entry, kept as you typed it, however rough; at the next session Claude turns it into clean tasks, or files it as a note;
 - Today, your plan for the day (below);
+- Upcoming, the days ahead one by one: what will land on Today, and when;
 - your reminders;
 - everything grouped by project and area;
 - what you're waiting on from other people, and what's on hold.
 
 **What's on Today.** Anything you planned for today or an earlier day, anything with a deadline today or already past, and anything you've marked as in progress. Deadlines come first, then the big jobs, then the quick ones, and the first row says "Start here". Important things with no day yet sit underneath in "Not planned yet": give one a day and it moves onto Today.
+
+Every task has a number (#142), so you can tell Claude "#142 is done" instead of spelling out the title.
 
 It runs while that Claude session is open. When the session closes, the board goes too, but your tasks are files and lose nothing.
 
@@ -83,16 +86,19 @@ If the folder syncs to your phone (iCloud Drive, OneDrive, Dropbox, Google Drive
 
 | | |
 |---|---|
+| **#142** | The task's number. Use it when you talk to Claude about a task. |
 | **Planned** | The day you mean to do it. A planned day puts a task on Today when it arrives. |
 | **Deadline** | A real date someone else set. Late deadlines show first on Today. |
 | **Carried N days** | You planned it for an earlier day and it's still not done. |
 | **Not planned yet** | Important, or due within a week, but with no planned day. |
+| **Upcoming** | Each task under the day it will reach Today: its planned day or its deadline, whichever comes first. |
 | **Effort** | Deep (a focused block), medium (an ordinary session) or quick (minutes), so you can pick one that fits the time you have. |
 | **Decision** | A yes/no call that's yours to make. The morning brief lists them, oldest first. |
+| **Your calls** | A switch beside the filters: shows only the decisions in the list you're looking at. |
 | **Whose move** | Who has to act next. Someone else's moves the task to Waiting on others. |
 | **Waiting on others** | Someone outside owes you something. Each one has a chase date; "Chased them today" moves it a week on. |
 | **On hold** | Waiting on another of your tasks to be finished first. The row says which one. |
-| **To sort** | Things from the brain dump that Claude hasn't filed yet. |
+| **To sort** | Entries from the brain dump that Claude hasn't filed yet, kept as you typed them. Underneath, **Recently processed** shows what was filed this week and where it went. |
 | **Someday** | Parked on purpose. It stays out of every list until you bring it back. |
 | **Dropped** | Not doing it after all. The board asks you why, so you'll know later. |
 

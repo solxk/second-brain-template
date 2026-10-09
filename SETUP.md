@@ -153,10 +153,10 @@ Then add two reminders of your own, and tell them why:
 
 1. Run `python3 Scripts/tasks.py sync`, then `python3 Scripts/tasks.py brief`.
 2. Start the board: run `python3 Scripts/tasks_board.py serve` in the background, and tell them to open http://127.0.0.1:8765/. Walk them through it in four sentences:
-   - the brain-dump box;
-   - Today: what they planned for today, deadlines due or late, and anything in progress, with "Start here" on the first row; underneath, "Not planned yet" holds important things with no day yet;
+   - the brain-dump box: each Enter adds one entry, kept as typed however rough, and Claude turns it into clean tasks at the next session;
+   - Today: what they planned for today, deadlines due or late, and anything in progress, with "Start here" on the first row; underneath, "Not planned yet" holds important things with no day yet. Upcoming shows the days ahead;
    - Reminders;
-   - By project, and Waiting on others for things someone else owes them.
+   - By project, and Waiting on others for things someone else owes them. Every task has a number, so "#12 is done" is enough.
 
    Say that it runs while this session is open, and that "open the board" in any session brings it back.
 

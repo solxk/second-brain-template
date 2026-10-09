@@ -48,9 +48,9 @@ If Google Tasks is connected, read its **Phone** list. Each item becomes one of:
 
 Use the task-or-reminder test in `Tasks/Tasks.md`. Then tick the item off in the Phone list.
 
-Then file To sort: `python3 Scripts/tasks.py list --status inbox`.
-- **Folder is clear:** `python3 Scripts/tasks.py set "<task>" --project "<Folder>" --status todo --source brief`, plus `--effort` when it's obvious.
-- **Two plausible folders:** it stays in To sort and goes under "File these?" with your guess.
+Then clean up To sort: `python3 Scripts/tasks.py list --status inbox`. An entry from the board's box is a brain dump, kept word for word after "Brain dump:" in its notes under a stand-in title (`python3 Scripts/tasks.py show "#n"`). Follow "Brain dumps" in `Tasks/Tasks.md`: read each one for what the owner meant, then turn it into clean tasks (a short title that starts with a verb, the folder, effort, any details worth adding), or file it as a reminder or a note, and drop the entry with a note saying where it went.
+- **Clear:** do it, and list it under "Sorted" by number.
+- **Meaning or folder unclear:** it stays in To sort and goes under "File these?" with your best guess.
 
 If `Inbox/` holds anything, count it and offer to file it after the brief.
 
@@ -84,24 +84,25 @@ One message, one screen, plain words. Leave out every section that's empty. Use 
 <Weekday d Month>
 <one line: what's on the calendar, and whether the day is planned>
 
-Start here: <task> (<Folder>) · <the first thing to do>
+Start here: #<n> <task> (<Folder>) · <the first thing to do>
 
 Needs you today
 1. <late or due-today deadline · reminder due · meeting to prepare · goal to close>
 
 Plan · <the limit> · OK?              (or "Today's plan" when it's already planned)
-<time>  Deep    <task> (<Folder>)
-<time>  Medium  <task> (<Folder>)
-<time>  Quick   <task> · <task> · <task>
-        Decide  <decision> (<Folder>)
-Left for another day: <task> · <task>
+<time>  Deep    #<n> <task> (<Folder>)
+<time>  Medium  #<n> <task> (<Folder>)
+<time>  Quick   #<n> <task> · #<n> <task> · #<n> <task>
+        Decide  #<n> <decision> (<Folder>)
+Left for another day: #<n> <task> · #<n> <task>
 
 Meetings
 <time> <who>: <what it's about> · open: <task>
 
-Decision waiting: <the oldest open decision> (<Folder>). <n> others; say if you'd like to go through them.
+Decision waiting: #<n> <the oldest open decision> (<Folder>). <n> others; say if you'd like to go through them.
 Waiting on others: <who>, <what> · <n> days past the chase date
-File these? <task>: <your guess>
+Sorted: #<n> <what the entry said, in a few words> → <where it went>
+File these? #<n> <entry>: <your guess>
 
 To sort: <n> filed · Inbox: <n> to file · Untouched for two weeks: <n>
 <anything not read, and why>

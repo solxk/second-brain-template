@@ -28,8 +28,8 @@
 .stat.alert b { color:var(--ink); }
 .stat.alert span { color:var(--ink); }
 .stat.zero b { opacity:.5; }
-.dumprow { align-items:center; padding:6px 6px 6px 22px; border-radius:999px; background:#3B3431; }
-#dump { border:0; background:transparent; color:#F4EFE9; padding:12px 0; min-height:44px; resize:none; }
+.dumprow { align-items:center; padding:6px 6px 6px 22px; border-radius:28px; background:#3B3431; }   /* a pill on one line; a long entry grows it into a rounded box */
+#dump { border:0; border-radius:0; background:transparent; color:#F4EFE9; padding:12px 0; min-height:44px; resize:none; }
 #dump::placeholder { color:#B9AEA6; }
 #dump:focus { outline:none; }
 .dumprow:focus-within { outline:2px solid var(--signal); outline-offset:2px; }
@@ -40,6 +40,7 @@
 #vtitle { font-size:32px; }
 .filters select { border:0; background:var(--card-2); }
 .filters select.set { background:var(--accent); color:var(--on-accent); }
+.filters .toggle { border:0; background:var(--card-2); }
 .week { margin:4px 0 16px; }
 .day.on .num { background:var(--accent); }
 .task { align-items:center; margin-bottom:8px; padding:10px 22px 10px 12px; border:0; border-radius:24px; background:var(--card-2); }   /* a pill on one line; a long title wraps into a rounded box, never a balloon */

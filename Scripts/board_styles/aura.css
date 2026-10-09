@@ -32,7 +32,10 @@ body { background-attachment:fixed; }
 
 .viewhead { border-bottom:0; padding-bottom:6px; }
 #vtitle { font-size:22px; }
-.filters select { border-color:rgba(143,148,240,.45); background:rgba(255,255,255,.7); color:#4A4EC4; font-weight:600; }
+.filters select, .filters .toggle { border-color:rgba(143,148,240,.45); background:rgba(255,255,255,.7); color:#4A4EC4; font-weight:600; }
+.filters .toggle .n { color:#4A4EC4; }
+.filters .toggle[aria-pressed=true] { border-color:#4A4EC4; background:#4A4EC4; color:#FFFFFF; }
+.dayhead { border-bottom:0; padding-bottom:6px; }   /* the rows under it are cards already */
 .task { margin-bottom:8px; padding:14px 18px; border:0; border-left:4px solid #9EF0C8; border-radius:var(--r-row); background:#FFFFFF; align-items:center; }
 .task.w-late { border-left-color:var(--signal); }
 .task.w-soon { border-left-color:#8F94F0; }

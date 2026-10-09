@@ -9,10 +9,15 @@ Part of the Second Brain template. Run every command from the folder's top level
         [--priority high|normal|low] [--owner Name] [--parent "Goal title"] [--after "Title" ...] [--inbox] [--note "text"]
         [--kind project|reminder] [--effort deep|medium|easy] [--decision]
         [--waiting-on "Dan"] [--expecting "the quote"] [--chase-after 2026-10-14]
-  python3 Scripts/tasks.py set "Title or file name" [--when 2026-10-07] [--status done] ...
+  python3 Scripts/tasks.py set "Title, file name or #number" [--when 2026-10-07] [--status done] ...
         [--decision] [--waiting-on x] [--expecting y] [--chase-after d] [--chased] [--clear-watch] [--clear when]
+        [--title "Clean title"] [--detail "a paragraph for the notes"] [--after "#12" ...] [--not-after "#12" ...]
         [--note "what happened"] [--source claude]
+  python3 Scripts/tasks.py show "#142"    # one task by number (or title): where it is and its fields
   python3 Scripts/tasks.py list [--project X] [--status Y]
+
+Every task has a number (`id`): `add` gives the next one, sync numbers any task without one and renumbers a
+duplicate, and a number is never reused (archived tasks keep theirs). "#142" works wherever a title does.
 
 Two dates, never mixed: `due` is a real deadline someone else set; `when` is the day you plan to do it
 (a reminder's day is its `when`). Tasks change only through `set` or the board, so every change is logged.
@@ -27,6 +32,7 @@ and block lists. Anything else is reported as malformed, never skipped silently.
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import sys
 from datetime import date, timedelta
@@ -70,7 +76,7 @@ def python_command(config: dict | None = None, platform: str | None = None) -> s
 OWNER = _config().get("owner") or "Me"            # the person whose tasks these are; others are waited on
 
 STATUS = "task-status"                       # the frontmatter key
-FIELDS = ["type", "title", "project", "parent", "depends-on", STATUS, "priority",
+FIELDS = ["type", "title", "id", "project", "parent", "depends-on", STATUS, "priority",
           "kind", "effort", "decision", "due", "when", "owner", "created", "updated", "done", "created-by"]
 WATCH_FIELDS = ["waiting-on", "expecting", "chase-after"]   # optional; only tasks waiting on someone outside carry them
 CHASE_DAYS = 7                                              # a watch with no chase date gets one a week out
@@ -89,7 +95,9 @@ CLOSED = {"done", "dropped"}                 # satisfy nothing further; dropped 
 NEEDS_DEPS_DONE = {"todo", "doing"}          # statuses a task cannot take while a dependency is still open
 STALE_DAYS, SOON_DAYS = 14, 7
 ARCHIVE_DAYS = 7                             # done tasks move to Tasks/Archive/ a week after they're done
+PROCESSED_DAYS = 7                           # the board's Recently processed strip, under To sort, looks back this far
 STALE_SHOWN = 5                              # the brief lists this many untouched tasks and counts the rest
+FIRST_LINE_MAX = 80                          # a brain dump's stand-in title is its first line, cut near here at a word
 REMINDER_AHEAD = 2                           # the brief shows a reminder from this many days before its day
 REMINDER_SKIP = {"priority": "normal", "effort": None, "decision": None, "parent": None, "depends-on": [], "due": None,
                  "owner": None}             # a reminder is saved without these when they hold nothing; load puts them back
@@ -101,6 +109,7 @@ CONTROL = re.compile(r"[\x00-\x1f\x7f]")       # a newline in a value would brea
 LOG_LINE = re.compile(r"^- (\d{4}-\d{2}-\d{2})\s+(\S+)", re.M)
 WHEN_CHANGE = re.compile(r"\bwhen\b([^;\n]*?)(?:→|->)")   # a when change in a log line; group 1 holds the old value
 ISO_DAY = re.compile(r"\b\d{4}-\d{2}-\d{2}\b")
+LEFT_INBOX = re.compile(r"^- (\d{4}-\d{2}-\d{2})\s+\S+[^\n]*\bstatus inbox (?:→|->)", re.M)   # a log line sorting it out of To sort
 BULK_SOURCES = {"migration"}      # one-off rewrites of every task: they say nothing about whether a task moved
 LABELS = {"task-status": "status"}   # how a field reads in a log line; the key itself stays in the file
 
@@ -172,8 +181,8 @@ def serialize(fm: dict, body: str) -> str:
         keys = [k for k in keys if not (k in REMINDER_SKIP and fm.get(k) in (REMINDER_SKIP[k], None, "", []))]
     lines = ["---"]
     for k in keys:
-        if k not in fm and k not in FIELDS:
-            continue
+        if (k not in fm and k not in FIELDS) or (k == "id" and not fm.get("id")):
+            continue                              # a task with no number yet gets no empty id line
         v = fm.get(k)
         if k in LIST_FIELDS or isinstance(v, list):
             if not v:
@@ -217,6 +226,43 @@ def _find(tasks: dict, name: str):
     """A task by link text. A link typed by hand may keep a title's colon while the file name can't,
     so try the file-name form too."""
     return tasks.get(name) or tasks.get(safe_filename(name))
+
+
+def task_id(t: dict) -> int | None:
+    """The task's number (`id`), None when it has none yet (sync gives it one)."""
+    v = t.get("id")
+    return int(v) if v not in (None, "") and str(v).isdigit() else None
+
+
+def ref(t: dict) -> str:
+    """"#142 " to put before a title wherever the owner reads a task list, so they can answer by number."""
+    return f"#{t['id']} " if t.get("id") else ""
+
+
+def next_id(folder: Path) -> int:
+    """One more than the highest number in Tasks/ or Tasks/Archive/, so a number is never reused."""
+    ids = [task_id(t) for f in (folder, folder / "Archive") for t in load_tasks(f)[0].values()]
+    return max([i for i in ids if i] or [0]) + 1
+
+
+def first_line(t: dict) -> str:
+    """The first line of the task's notes: its body's first non-empty line that is not a log line, cut at a word to
+    about FIRST_LINE_MAX characters with "…" when longer. "" if none."""
+    for line in (t.get("_body") or "").splitlines():
+        if line.strip() and not LOG_LINE.match(line):
+            s = line.strip()
+            if len(s) <= FIRST_LINE_MAX:
+                return s
+            i = s[:FIRST_LINE_MAX + 1].rfind(" ")
+            return (s[:i] if i > FIRST_LINE_MAX // 2 else s[:FIRST_LINE_MAX]).rstrip(" ,;:") + "…"
+    return ""
+
+
+def dump_title(text: str) -> str:
+    """A brain dump's stand-in title until Claude sorts it: its first line, cut at a word to about FIRST_LINE_MAX
+    characters with "…" (a long voice note would make a file name too long to save)."""
+    line = next((l.strip() for l in str(text).splitlines() if l.strip()), "")
+    return first_line({"_body": line}) or "Brain dump"
 
 
 def is_decision(t: dict) -> bool:
@@ -372,6 +418,8 @@ def validate(fm: dict, path: Path) -> None:
             _parse_date(fm[f], f)
     if not isinstance(fm.get("depends-on"), list):
         raise TaskError("depends-on must be a list")
+    if fm.get("id") not in (None, "") and not re.fullmatch(r"[1-9]\d*", str(fm["id"])):
+        raise TaskError(f"bad id {fm.get('id')!r}")
 
 
 def load_tasks(folder: Path = TASKS_DIR) -> tuple[dict[str, dict], list[tuple[Path, str]]]:
@@ -428,23 +476,25 @@ def open_dependencies(task: dict, tasks: dict, archived: dict | None = None) -> 
 
 
 def update_task(folder: Path, name: str, changes: dict, today: date, source: str = "board",
-                note: str = "") -> dict:
+                note: str = "", detail: str = "") -> dict:
     """Change EDITABLE fields on one task, validate, log one line, bump `updated`. Raises TaskError.
     `note` adds free text to the log line, so a skill can record what happened ("title register arrived")
     even when no field changes. Setting `waiting-on` without a chase date gives it one CHASE_DAYS out.
     `{"chased": true}` is not a field: you chased them today, so `chase-after` moves to CHASE_DAYS from today
     (unless a chase-after is given too) and the log line says "chased".
-    Refuses todo or doing while a dependency is open (sync would undo it), and dropped without a note."""
+    Refuses todo or doing while a dependency is open (sync would undo it), and dropped without a note.
+    `depends-on` (a list of task names) is Claude's to set, never the board's; the caller runs
+    sync to work out blocked. `detail` adds a paragraph to the notes, above the log lines."""
     tasks, _ = load_tasks(folder)
     t = tasks.get(name)
     if t is None:
         raise TaskError(f"no task {name!r}")
     changes = dict(changes)
     chased = str(changes.pop("chased", False)).lower() == "true"
-    bad = set(changes) - EDITABLE
+    bad = set(changes) - EDITABLE - ({"depends-on"} if source != "board" else set())
     if bad:
         raise TaskError(f"not editable: {', '.join(sorted(bad))}")
-    for k, v in list(changes.items()) + [("note", note)]:
+    for k, v in list(changes.items()) + [("note", note), ("detail", detail.replace("\n", " "))]:
         vals = v if isinstance(v, list) else [v]
         if any(isinstance(x, str) and CONTROL.search(x) for x in vals):
             raise TaskError(f"{k}: control characters are not allowed")
@@ -464,6 +514,10 @@ def update_task(folder: Path, name: str, changes: dict, today: date, source: str
     for k, v in changes.items():
         if k in {"project", "parent"}:
             v = f"[[{link_target(v)}]]" if v else None
+        elif k == "depends-on":
+            v = [f"[[{link_target(x)}]]" for x in (v or [])]
+            if (t.get(k) or []) == v:
+                continue
         elif k == "waiting-on":
             v = watch_parties({"waiting-on": v}) or None
         elif k == "decision":
@@ -483,6 +537,12 @@ def update_task(folder: Path, name: str, changes: dict, today: date, source: str
         if not changes.get("chase-after"):
             t["chase-after"] = (today + timedelta(days=CHASE_DAYS)).isoformat()
         log.append("chased")
+    if detail.strip():
+        lines = t["_body"].split("\n")
+        at = next((i for i, line in enumerate(lines) if LOG_LINE.match(line)), len(lines))
+        head, tail = "\n".join(lines[:at]).rstrip(), "\n".join(lines[at:]).lstrip("\n")
+        t["_body"] = (head + "\n\n" if head else "") + detail.strip() + "\n\n" + tail
+        log.append("details added")
     if note.strip():
         log.append(note.strip())
     if not log:
@@ -505,10 +565,74 @@ def update_task(folder: Path, name: str, changes: dict, today: date, source: str
     return t
 
 
+def rename_task(folder: Path, name: str, title: str, today: date, source: str = "claude") -> str:
+    """Give a task a new title and the file name that goes with it, logged, and point every link in Tasks/ at
+    the new name. For sorting a brain dump under a clean title; links elsewhere in the folder are
+    left to check_wiki_links. Returns the new file name. Refuses a name already used in Tasks/ or its archive."""
+    tasks, _ = load_tasks(folder)
+    t = tasks.get(name)
+    if t is None:
+        raise TaskError(f"no task {name!r}")
+    title = title.strip()
+    new = safe_filename(title)
+    if not new or CONTROL.search(title):
+        raise TaskError(f"bad title {title!r}")
+    if new != name and ((folder / f"{new}.md").exists() or (folder / "Archive" / f"{new}.md").exists()):
+        raise TaskError(f"task already exists: {new}.md")
+    if t["title"] == title and new == name:
+        return name
+    t["_body"] = t["_body"].rstrip("\n") + f"\n- {today.isoformat()} {source}: title {t['title']} → {title}\n"
+    t["title"], t["updated"] = title, today.isoformat()
+    _write(t)
+    if new != name:
+        t["_path"].rename(folder / f"{new}.md")
+        link = re.compile(r"\[\[" + re.escape(name) + r"(?=[\]|#])")
+        for other in folder.glob("*.md"):
+            if other.stem == new:
+                continue
+            text = other.read_text(encoding="utf-8")
+            if link.search(text):
+                other.write_text(link.sub("[[" + new.replace("\\", "\\\\"), text), encoding="utf-8")
+    return new
+
+
 def reminder_day(t: dict):
     """A reminder's day: its `when` (older notes may carry it in `due`)."""
     v = t.get("when") or t.get("due")
     return _parse_date(v, "when") if v else None
+
+
+def on_today(t: dict, today: date) -> bool:
+    """Planned (`when`) for today or an earlier day, a deadline today or earlier, or in progress.
+    views() adds the rest of Today's rule: your open tasks, never goals or reminders."""
+    d = _parse_date(t["due"], "due") if t.get("due") else None
+    w = _parse_date(t["when"], "when") if t.get("when") else None
+    return bool((w and w <= today) or (d and d <= today) or t[STATUS] == "doing")
+
+
+def upcoming_day(t: dict, today: date) -> date | None:
+    """The first later day on_today would put this task on Today: the earlier of a later `when` and a later
+    deadline. None when it is on Today already or has neither. Upcoming reads it."""
+    if on_today(t, today):
+        return None
+    later = [d for d in (_parse_date(t[k], k) for k in ("when", "due") if t.get(k)) if d > today]
+    return min(later) if later else None
+
+
+def left_inbox(t: dict) -> date | None:
+    """The day the task last left To sort, from its log ("status inbox → todo"); None if it never did.
+    The board's Recently processed reads it."""
+    days = [m.group(1) for m in LEFT_INBOX.finditer(t.get("_body") or "")]
+    return date.fromisoformat(max(days)) if days else None
+
+
+def today_rank(t: dict, today: date) -> tuple:
+    """A row's place on Today: deadlines due or late first (late first), then deep, medium, quick (easy), unsized;
+    in each group the earliest `when` first (carried tasks), then title."""
+    if t.get("due") and _parse_date(t["due"], "due") <= today:
+        return (0, t["due"], t.get("when") or "9999", t["title"])
+    effort = {"deep": 1, "medium": 2, "easy": 3}.get(t.get("effort"), 4)
+    return (effort, "", t.get("when") or "9999", t["title"])
 
 
 def views(tasks: dict, today: date, me: str = OWNER) -> dict:
@@ -519,9 +643,14 @@ def views(tasks: dict, today: date, me: str = OWNER) -> dict:
     page marks row one "Start here". "unplanned" is Not planned yet: your open tasks, not blocked and not on
     Today, with no `when`, that are high priority or have a deadline within SOON_DAYS. A later `when` is a plan,
     so it keeps a task off both until that day; its deadline still puts it on Today on the day.
+    "upcoming" is Upcoming, Today's rule run forward: your open tasks, never goals or reminders,
+    that are not on Today and have a later `when` or deadline, each on its upcoming_day, by that day and then in the
+    order Today will show them on it (today_rank as of that day).
     "waiting" is Waiting on others: open tasks that wait outside (waits_outside), by chase date (late first; none
     yet last), then title. "onhold" is your open blocked tasks that wait on nothing outside. "claude" is Claude's
     open tasks: high priority first, then deadline, then created. "reminders" are open reminders by day.
+    "processed" is Recently processed, under To sort: tasks that left To sort (left_inbox) in the last
+    PROCESSED_DAYS days, newest first.
     "decisions" (open yes/no calls, oldest first) feeds the brief; the board has no tab for it."""
     live = [t for t in tasks.values() if t[STATUS] in OPEN]
     rank = {"high": 0, "normal": 1, "low": 2}
@@ -529,25 +658,14 @@ def views(tasks: dict, today: date, me: str = OWNER) -> dict:
     def due(t):
         return _parse_date(t["due"], "due") if t.get("due") else None
 
-    def when(t):
-        return _parse_date(t["when"], "when") if t.get("when") else None
-
-    def on_today(t):
-        d, w = due(t), when(t)
-        return bool((w and w <= today) or (d and d <= today) or t[STATUS] == "doing")
-
-    def today_rank(t):
-        if due(t) and due(t) <= today:
-            return (0, t["due"], t.get("when") or "9999", t["title"])
-        effort = {"deep": 1, "medium": 2, "easy": 3}.get(t.get("effort"), 4)
-        return (effort, "", t.get("when") or "9999", t["title"])
-
     work = [t for t in live if t.get("kind") != "reminder"]
     mine = [t for t in work if is_me(t.get("owner"), me) and t.get("kind") != "project"]
-    unplanned = [t for t in mine if not on_today(t) and not when(t) and t[STATUS] != "blocked"
+    unplanned = [t for t in mine if not on_today(t, today) and not t.get("when") and t[STATUS] != "blocked"
                  and (t["priority"] == "high" or (due(t) and due(t) <= today + timedelta(days=SOON_DAYS)))]
+    ahead = [(upcoming_day(t, today), t) for t in mine]
     return {
-        "today": sorted((t for t in mine if on_today(t)), key=today_rank),
+        "today": sorted((t for t in mine if on_today(t, today)), key=lambda t: today_rank(t, today)),
+        "upcoming": [t for d, t in sorted(((d, t) for d, t in ahead if d), key=lambda dt: (dt[0], today_rank(dt[1], dt[0])))],
         "unplanned": sorted(unplanned, key=lambda t: (t.get("due") or "9999", t["priority"] != "high", t["title"])),
         "reminders": sorted((t for t in live if t.get("kind") == "reminder"),
                             key=lambda t: ((reminder_day(t) or date.max).isoformat(), t["title"])),
@@ -558,6 +676,9 @@ def views(tasks: dict, today: date, me: str = OWNER) -> dict:
         "claude": sorted((t for t in work if is_claude(t.get("owner"))),
                          key=lambda t: (rank[t["priority"]], t.get("due") or "9999", t.get("created") or "", t["title"])),
         "inbox": sorted((t for t in tasks.values() if t[STATUS] == "inbox"), key=lambda t: (t.get("created") or "", t["title"])),
+        "processed": sorted((t for t in tasks.values() if t[STATUS] != "inbox" and left_inbox(t)
+                             and left_inbox(t) >= today - timedelta(days=PROCESSED_DAYS)),
+                            key=lambda t: (left_inbox(t), t["title"]), reverse=True),
         "someday": sorted((t for t in tasks.values() if t[STATUS] == "someday"), key=lambda t: t["title"]),
         "done": sorted((t for t in tasks.values() if t[STATUS] == "done"), key=lambda t: t.get("done") or "", reverse=True),
     }
@@ -588,6 +709,7 @@ def sync(folder: Path = TASKS_DIR, today: date | None = None, archive: bool = Tr
     for name in in_both(folder):
         report["review"].append(f"{name}: also in Archive/ (reused name) - compare, keep one")
     report["review"] += hierarchy_review(tasks)
+    number_tasks(tasks, archived, today, report)
     dropped = {n for n, t in tasks.items() if t[STATUS] == "dropped"}
     for name, t in tasks.items():
         changed = False
@@ -643,6 +765,33 @@ def sync(folder: Path = TASKS_DIR, today: date | None = None, archive: bool = Tr
     return report
 
 
+def number_tasks(tasks: dict, archived: dict, today: date, report: dict) -> None:
+    """Give every task without a number the next free one, oldest first (created, then name). Where two hold the
+    same number (two computers numbered at once, or a number an archived task already has) the oldest keeps it
+    and the other is renumbered, with a log line so a "#n" the owner used can be traced. A first number logs nothing,
+    and numbering keeps the file's modification time: it is not an edit."""
+    taken = {task_id(t) for t in archived.values()} - {None}
+    order = sorted(tasks.items(), key=lambda kv: (kv[1].get("created") or "", kv[0]))
+    keeps: dict = {}
+    for name, t in order:
+        i = task_id(t)
+        if i is not None and i not in taken and i not in keeps:
+            keeps[i] = name
+    nxt = max(taken | set(keeps) | {0}) + 1
+    for name, t in order:
+        i = task_id(t)
+        if i is not None and keeps.get(i) == name:
+            continue
+        t["id"] = str(nxt)
+        if i is not None:
+            t["_body"] = t["_body"].rstrip("\n") + f"\n- {today.isoformat()} sync: id {i} → {nxt} ({i} was taken)\n"
+        was = t["_path"].stat()
+        _write(t)
+        os.utime(t["_path"], ns=(was.st_atime_ns, was.st_mtime_ns))   # `updated` and the chase rule read mtime
+        report["changed"].append(f"{name}: id {'#' + str(i) + ' → ' if i is not None else ''}#{nxt}")
+        nxt += 1
+
+
 # ---------- brief ----------
 
 def brief(folder: Path = TASKS_DIR, today: date | None = None) -> dict:
@@ -679,12 +828,12 @@ def _line(t: dict, today: date, mark: str = "") -> str:
     if t.get("kind") == "reminder":
         d = reminder_day(t)
         late = " (overdue)" if d and d < today else ""
-        return f"  - {t['title']}  {d.isoformat() if d else ''}{late}".rstrip()
+        return f"  - {ref(t)}{t['title']}  {d.isoformat() if d else ''}{late}".rstrip()
     proj = link_name(t["project"]) if t.get("project") else "—"
     due = f"  deadline {t['due']}" if t.get("due") else ""
     when = f"  planned {t['when']}" if t.get("when") else ""
     chase = f"  chase after {t['chase-after']}" if t.get("chase-after") else ""
-    return f"  - {mark}[{t['priority']}] {t['title']}  ({proj}, {t.get('owner') or '—'}){due}{when}{chase}"
+    return f"  - {mark}{ref(t)}[{t['priority']}] {t['title']}  ({proj}, {t.get('owner') or '—'}){due}{when}{chase}"
 
 
 def format_brief(b: dict, today: date) -> str:
@@ -723,11 +872,18 @@ def safe_filename(title: str) -> str:
 
 
 def resolve(tasks: dict, name: str) -> str:
-    """A task's file name, from its file name or its title (a title may hold characters the file name dropped)."""
+    """A task's file name, from its file name, its title (a title may hold characters the file name dropped) or its
+    number ("#142" or "142")."""
     if name in tasks:
         return name
     if safe_filename(name) in tasks:
         return safe_filename(name)
+    m = re.fullmatch(r"#?(\d+)", name.strip())
+    if m:
+        hits = [n for n, t in tasks.items() if task_id(t) == int(m.group(1))]
+        if len(hits) == 1:
+            return hits[0]
+        raise TaskError(f"no task #{m.group(1)}")
     hits = [n for n, t in tasks.items() if t.get("title") == name]
     if len(hits) == 1:
         return hits[0]
@@ -786,7 +942,7 @@ def add_task(folder: Path, today: date, title: str, project: str | None = None, 
     elif owner and is_claude(owner):
         owner = CLAUDE
     fm = {
-        "type": "task", "title": title,
+        "type": "task", "title": title, "id": str(next_id(folder)),
         "project": f"[[{link_target(project)}]]" if project else None,
         "parent": f"[[{link_target(parent)}]]" if parent else None,
         "depends-on": [f"[[{link_target(a)}]]" for a in (after or [])],
@@ -814,7 +970,7 @@ def format_list(rows: list[dict]) -> str:
     """One line per task. A goal is marked with vault.json's word for it ("goal" unless setup chose another)."""
     goal = ((_config().get("labels") or {}).get("project") or "Goal").lower()
     marks = {"project": f"  ({goal})", "reminder": "  (reminder)"}
-    return "".join(f"{t[STATUS]:8} {t['priority']:6} {t.get('due') or '':10} {t.get('when') or '':10} "
+    return "".join(f"{'#' + t['id'] if t.get('id') else '':6} {t[STATUS]:8} {t['priority']:6} {t.get('due') or '':10} {t.get('when') or '':10} "
                    f"{link_name(t.get('project') or '—'):22} {t['title']}{marks.get(t.get('kind'), '')}\n" for t in rows)
 
 
@@ -846,7 +1002,7 @@ def main(argv: list[str] | None = None) -> int:
     a.add_argument("--owner", default=OWNER, help=f"whose move it is (default {OWNER}); someone else's puts it under Waiting on others")
     a.add_argument("--parent", help="the goal it sits under, by title")
     a.add_argument("--after", action="append", default=[], help="a task that has to be finished first (repeatable)")
-    a.add_argument("--inbox", action="store_true", help="a brain-dump line: To sort, no folder yet")
+    a.add_argument("--inbox", action="store_true", help="no folder yet: it waits in To sort for Claude to file")
     a.add_argument("--status", choices=sorted(STATUSES), help="start it somewhere other than To do (e.g. someday)")
     a.add_argument("--note", default="", help="text for the note's body")
     a.add_argument("--kind", default="task", choices=sorted(KINDS),
@@ -857,7 +1013,7 @@ def main(argv: list[str] | None = None) -> int:
     a.add_argument("--expecting", help="what you're waiting for, in plain words")
     a.add_argument("--chase-after", help=f"YYYY-MM-DD: when silence counts as late; default {CHASE_DAYS} days after --waiting-on")
     s = sub.add_parser("set", help="change one task the way the board does: checked, dated, logged")
-    s.add_argument("name", help="the task's file name or title")
+    s.add_argument("name", help='the task\'s number ("#142"), title or file name')
     s.add_argument("--status", choices=sorted(STATUSES), help="dropped needs --note saying why")
     s.add_argument("--priority", choices=sorted(PRIORITIES), help="high, normal or low")
     s.add_argument("--effort", choices=sorted(EFFORTS), help="deep, medium or easy")
@@ -875,7 +1031,13 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--clear", action="append", default=[], choices=["due", "when", "parent", "effort", "owner", "decision"],
                    help="empty a field (repeatable)")
     s.add_argument("--note", default="", help="what happened, for the log line")
+    s.add_argument("--title", help="a new title; the note is renamed and links in Tasks/ follow")
+    s.add_argument("--detail", default="", help="a paragraph for the task's notes, above the log")
+    s.add_argument("--after", action="append", default=[], help="a task this one now waits on (repeatable)")
+    s.add_argument("--not-after", action="append", default=[], help="a task this one no longer waits on (repeatable)")
     s.add_argument("--source", default="claude", help="the word the log line starts with (claude, board, ...)")
+    w = sub.add_parser("show", help="one task by number or title, from Tasks/ or its archive")
+    w.add_argument("name", help='the task\'s number ("#142"), title or file name')
     l = sub.add_parser("list", help="every task, one line each")
     l.add_argument("--project", help="only this project or area")
     l.add_argument("--status", choices=sorted(STATUSES), help="only this status")
@@ -933,18 +1095,52 @@ def main(argv: list[str] | None = None) -> int:
             changes[f] = None
         if args.clear_watch:
             changes.update({k: None for k in WATCH_FIELDS})
-        if not changes and not args.note.strip():
+        if not (changes or args.note.strip() or args.title or args.detail.strip() or args.after or args.not_after):
             print("ERROR: nothing to change", file=sys.stderr)
             return 1
         try:
             tasks, _ = load_tasks(TASKS_DIR)
             name = resolve(tasks, args.name)
-            update_task(TASKS_DIR, name, changes, today, source=args.source, note=args.note)
+            if args.after or args.not_after:
+                deps = [link_name(d) for d in tasks[name].get("depends-on") or []]
+                for a in args.after:
+                    d = resolve(tasks, a)
+                    if d == name:
+                        raise TaskError("a task cannot wait on itself")
+                    if d not in [link_target(x) for x in deps]:
+                        deps.append(d)
+                for a in args.not_after:
+                    try:
+                        gone = resolve(tasks, a)
+                    except TaskError:
+                        gone = link_target(a)       # an archived or missing blocker can still be taken off
+                    deps = [x for x in deps if link_target(x) != gone]
+                changes["depends-on"] = deps
+            if args.title:
+                name = rename_task(TASKS_DIR, name, args.title, today, source=args.source)
+            update_task(TASKS_DIR, name, changes, today, source=args.source, note=args.note, detail=args.detail)
+            if "depends-on" in changes:
+                sync(TASKS_DIR, today, archive=False)   # on hold or to do follows from the new blockers now
         except TaskError as e:
             print("ERROR:", e, file=sys.stderr)
             return 1
         print("updated:", name)
         return 0
+    if args.cmd == "show":
+        for folder in (TASKS_DIR, TASKS_DIR / "Archive"):
+            tasks, _ = load_tasks(folder)
+            try:
+                t = tasks[resolve(tasks, args.name)]
+            except TaskError:
+                continue
+            print(f"#{t.get('id') or '?'} {t['title']}")
+            print("file:", t["_path"].relative_to(VAULT) if t["_path"].is_relative_to(VAULT) else t["_path"])
+            for k in FIELDS[3:] + WATCH_FIELDS:
+                if t.get(k) not in (None, "", []):
+                    print(f"{LABELS.get(k, k)}: {_show(t[k])}")
+            return 0
+        print(f"ERROR: no task {args.name!r}", file=sys.stderr)
+        return 1
     if args.cmd == "list":
         print(format_list(list_tasks(TASKS_DIR, args.project, args.status)), end="")
         return 0

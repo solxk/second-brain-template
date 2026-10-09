@@ -73,20 +73,20 @@ Moved
 - <Folder>: <what moved>              (five lines at most)
 
 Closed
-- <task> · <what finished it>
+- #<n> <task> · <what finished it>
 
 Close these?
-- <task> · <why it looks done>
+- #<n> <task> · <why it looks done>
 
 Tomorrow (<Weekday>) · OK?
-<time>  Deep    <task> (<Folder>)
-<time>  Medium  <task> (<Folder>)
-<time>  Quick   <task> · <task>
+<time>  Deep    #<n> <task> (<Folder>)
+<time>  Medium  #<n> <task> (<Folder>)
+<time>  Quick   #<n> <task> · #<n> <task>
 First thing: <one concrete action>
-Left for another day: <task> · <task>
+Left for another day: #<n> <task> · #<n> <task>
 Or: carry everything unfinished to tomorrow (<n> tasks)
 
 Still waiting on you
-- <the oldest open decision>
+- #<n> <the oldest open decision>
 - <who, what: past its chase date>
 ```

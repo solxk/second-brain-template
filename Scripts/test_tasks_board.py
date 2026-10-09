@@ -82,18 +82,27 @@ class Api(unittest.TestCase):
             self.assertIn(f'src="/?style={name}"', html)
             self.assertIn(meta["label"], html)
 
-    def test_add_lines_become_inbox_tasks(self):
-        status, r = self.call("POST", "/api/add", {"lines": "Buy a new mouse\n\n   \nCall the bank: ask about fees\n"})
+    def test_add_is_one_entry_kept_as_typed(self):
+        # one entry per Enter, whatever it holds; Claude cleans it up and sorts it later
+        status, r = self.call("POST", "/api/add", {"lines": "Buy a new mouse\n\nand call the bank: ask about fees\n"})
         self.assertEqual(status, 200)
-        self.assertEqual(r["created"], ["Buy a new mouse", "Call the bank- ask about fees"])
-        fm, _ = T.parse_frontmatter((self.tmp / "Buy a new mouse.md").read_text())
-        self.assertEqual(fm[T.STATUS], "inbox")
+        self.assertEqual(r, {"created": ["Buy a new mouse"], "rejected": []})
+        fm, body = T.parse_frontmatter((self.tmp / "Buy a new mouse.md").read_text())
+        self.assertEqual((fm[T.STATUS], fm["id"]), ("inbox", "1"))
+        self.assertTrue(body.startswith("Brain dump: Buy a new mouse\n\nand call the bank: ask about fees\n"), body)
 
-    def test_add_duplicate_line_is_rejected_with_the_line_as_typed(self):
-        status, r = self.call("POST", "/api/add", {"lines": "Existing  \nFresh one"})
+    def test_add_long_dump_gets_a_short_title(self):
+        text = "so I was thinking we should probably sort out the whole shed roof thing before the winter rain comes " * 3
+        status, r = self.call("POST", "/api/add", {"lines": text})
         self.assertEqual(status, 200)
-        self.assertEqual(r, {"created": ["Fresh one"],
-                             "rejected": [{"line": "Existing  ", "error": "task already exists: Existing.md"}]})
+        self.assertTrue(r["created"][0].endswith("…") and len(r["created"][0]) <= T.FIRST_LINE_MAX + 1)
+        self.assertIn(text.strip(), (self.tmp / f"{r['created'][0]}.md").read_text())
+
+    def test_add_duplicate_entry_is_rejected_as_typed(self):
+        status, r = self.call("POST", "/api/add", {"lines": "Existing  "})
+        self.assertEqual(status, 200)
+        self.assertEqual(r, {"created": [], "rejected": [{"line": "Existing  ", "error": "task already exists: Existing.md"}]})
+        self.assertEqual(self.call("POST", "/api/add", {"lines": "  \n "})[1], {"created": [], "rejected": []})
 
     def test_update_changes_field_and_runs_sync(self):
         _, p = self.call("GET", "/api/tasks")
@@ -308,6 +317,53 @@ class TaskSystemPort(unittest.TestCase):
                 code = B.main(["export"])
             self.assertEqual(code, 0)
             self.assertIn("skipped, only Sams-MacBook writes", out.getvalue())
+
+
+class NinthOctober(unittest.TestCase):
+    """The vault's task board changes of 2026-10-09, as the template has them."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.today = date(2026, 10, 9)
+
+    def static(self) -> str:
+        html = B.export_snapshot(self.tmp, self.today, out=self.tmp / "Board.html")[0].read_text()
+        return html.split('<main id="main">', 1)[1].split("</main>", 1)[0]
+
+    def test_payload_and_snapshot_have_upcoming(self):
+        make(self.tmp, "Saturday job", when="2026-10-10")
+        make(self.tmp, "Today's job", when="2026-10-09")
+        self.assertEqual(B.payload(self.tmp, self.today)["views"]["upcoming"], ["Saturday job"])
+        upcoming = self.static().split(">Upcoming<", 1)[1].split('<div class="group">', 1)[0]
+        self.assertIn("Saturday job", upcoming)
+        self.assertNotIn("Today's job", upcoming)
+
+    def test_recently_processed_reaches_into_the_archive_read_only(self):
+        # a dump filed as a note is dropped and archived at once; it still shows for a week
+        make(self.tmp, "Filed", body="- 2026-10-05 brief: status inbox → todo\n")
+        make(self.tmp, "Still to sort", status="inbox")
+        (self.tmp / "Archive").mkdir()
+        make(self.tmp / "Archive", "Note-ish dump", status="dropped", **{"depends-on": ["[[Still to sort]]"]},
+             body="- 2026-10-06 brief: status inbox → dropped; filed as a note in [[Home]]\n")
+        make(self.tmp / "Archive", "Old dump", status="dropped", body="- 2026-09-01 brief: status inbox → dropped\n")
+        p = B.payload(self.tmp, self.today)
+        self.assertEqual(p["views"]["processed"], ["Note-ish dump", "Filed"])
+        rows = {t["name"]: t for t in p["tasks"]}
+        self.assertTrue(rows["Note-ish dump"]["archived"])
+        self.assertEqual(rows["Note-ish dump"]["held_by"], [])      # an archived row holds nothing up on the page
+        self.assertNotIn("archived", rows["Filed"])
+        self.assertNotIn("Old dump", rows)
+        self.assertEqual((rows["Filed"]["processed"], rows["Still to sort"]["processed"]), ("2026-10-05", None))
+        self.assertNotIn("Note-ish dump", json.dumps(p["tree"]) + json.dumps(p["folders"]))
+
+    def test_numbers_reach_the_page_and_the_snapshot(self):
+        make(self.tmp, "Numbered", id="4", when="2026-10-09")
+        make(self.tmp, "A goal", id="5", kind="project")
+        p = B.payload(self.tmp, self.today)
+        self.assertEqual({t["name"]: t["id"] for t in p["tasks"]}, {"Numbered": "4", "A goal": "5"})
+        static = self.static()
+        self.assertIn("#4 · P · ", static)
+        self.assertIn(">#5<", static.split('class="project"', 1)[1])
 
 
 class GuardsApi(unittest.TestCase):
