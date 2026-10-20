@@ -83,7 +83,11 @@
   .side-reminders { grid-area:reminders; align-self:stretch; }
   .side-waiting { grid-area:waiting; align-self:stretch; }
   .side-folders { grid-area:folders; align-self:stretch; }
+  .top { column-gap:16px; }
+  #tabs button { padding:0 8px; }   /* brand, all ten tabs and the date fit on one line at full width */
 }
+@media (min-width: 761px) and (max-width: 1239px) { .stamp { display:none; } }   /* no room beside the tabs; the greeting band has the date */
+@media (min-width: 761px) and (max-width: 1099px) { #tabs { flex-basis:100%; flex-wrap:wrap; overflow:visible; border-radius:26px; } }   /* a row of their own, wrapping, never scrolled out of sight */
 @media (min-width: 1100px) {
   .app { grid-template-columns:minmax(0, 1fr) 340px;
          grid-template-areas:"top top" "banner banner" "hero hero" "capture gauge" "list gauge" "list reminders" "list waiting" "list folders" "list .";
